@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">FastWind</string>
+    <string name="action_settings">Asetukset</string>
+    <string name="pref_user_profile">Käyttäjän profiili</string>
+    <string name="pref_user_key">Tunnisteavain fmi-apikey</string>
+    <string name="pref_user_keyinfo">Rekisteröitymisen yhteydessä Fmi-palvelusta saatava tunnisteavain.</string>
+    <string name="pref_user_obserstation">Alasvetovalikkoon tulevat sää asemat</string>
+    <string name="pref_user_obserstationinfo">Käytössä olevat sääasemat löytyvät: http://ilmatieteenlaitos.fi/havaintoasemat</string>
+    <string name="download_text">Ennustetta ladataan...</string>
+    <string name="error_download_text">Ennusteen lataus epäonnistui.</string>
+    <string name="action_favorite">Valitse sääasema</string>
+
+    <string-array name="option_arrays">
+        <item>Mitattu ja ennuste tuuli m/s</item>
+        <item>Mitattu tuuli m/s</item>
+        <item>Ennuste tuuli m/s</item>
+        <item>Mitattu lämpötila °C</item>
+        <item>Ennuste lämpötila °C</item>
+    </string-array>
+</resources>
