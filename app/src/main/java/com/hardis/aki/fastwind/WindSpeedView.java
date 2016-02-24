@@ -113,8 +113,10 @@ public class WindSpeedView extends View {
 
     public void getBundleData(Bundle bundle) {
         try {
-
-            ByteArrayInputStream bis = new ByteArrayInputStream(bundle.getByteArray("savedata"));
+            byte sd[] = bundle.getByteArray("savedata");
+            if(sd == null)
+                return;
+            ByteArrayInputStream bis = new ByteArrayInputStream(sd);
             ObjectInputStream ois =
                     new ObjectInputStream(bis);
             weatherplace = (String[]) ois.readObject();
@@ -470,11 +472,15 @@ public class WindSpeedView extends View {
         }
 
         protected void onPostExecute(String result) {
-            progressDialog.dismiss();
-            if(result.equals("OK"))
-                invalidate();
-            else
-                Toast.makeText(context, R.string.error_download_text, Toast.LENGTH_SHORT).show();
+            try {
+                if (progressDialog != null)
+                    progressDialog.dismiss();
+                if (result.equals("OK"))
+                    invalidate();
+                else
+                    Toast.makeText(context, R.string.error_download_text, Toast.LENGTH_SHORT).show();
+            }catch (Exception e){
+            }
         }
 
     private String readXMLdata(String place) {
