@@ -85,7 +85,7 @@ public class MainActivity extends ActionBarActivity {
 
         if(savedInstanceState != null)
             windscreens.getBundleData(savedInstanceState);
-        else
+        else if(t2 != null)
             windscreens.setPlace(getProbePlaceList(0));
     }
 
@@ -130,9 +130,11 @@ public class MainActivity extends ActionBarActivity {
     public void onCreateContextMenu(ContextMenu menu, View v,ContextMenu.ContextMenuInfo menuInfo) {
         super.onCreateContextMenu(menu, v, menuInfo);
         menu.setHeaderTitle(R.string.action_favorite);
-        for (int loop = 0; loop < t2.length; loop++) {
-            if(t2[loop].charAt(0) != '*')
-                menu.add(0, loop, 0, t2[loop]);
+        if(t2!=null){
+            for (int loop = 0; loop < t2.length; loop++) {
+                if(t2[loop].charAt(0) != '*')
+                    menu.add(0, loop, 0, t2[loop]);
+            }
         }
     }
 

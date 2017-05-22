@@ -12,6 +12,7 @@ import android.graphics.Rect;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
@@ -25,6 +26,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Vector;
 
@@ -182,12 +184,12 @@ public class WindSpeedView extends View {
     private void drawNowAndHistory(Canvas canvas) {
         int loop;
         int index;
-        java.util.Date d = observations.get(0).getStep()[observations.get(0).getStep().length - 1];
         min = 0;
 
-        int t = d.getHours() - 5;
-        if (t < 0)
-            t += 24;
+        Calendar stobservations = Calendar.getInstance();
+        stobservations.setTime(forecast.get(0).getStep()[0]);
+        stobservations.add(Calendar.HOUR_OF_DAY, -6);
+
         double tx = (double) (sizex - MARGINALSIZE) / 12.0;
         for (loop = 0; loop < 13; loop++) {
             int x = (int) ((double) loop * tx) + MARGINALSIZE;
@@ -196,10 +198,8 @@ public class WindSpeedView extends View {
                 canvas.drawLine(x, sizey - 10, x, sizey, paint);
             }
             paint.setColor(Color.BLACK);
-            canvas.drawText("" + t, x, sizey + 15, paint);
-            t++;
-            if (t == 24)
-                t = 0;
+            canvas.drawText("" + stobservations.get(Calendar.HOUR_OF_DAY), x, sizey + 15, paint);
+            stobservations.add(Calendar.HOUR_OF_DAY, 1);
             paint.setColor(Color.BLUE);
             if (loop < 6) {
                 index = observations.get(0).getTempature().length - (6 * 60 / observations.get(0).minutesInCycle()) + loop * (60 / observations.get(0).minutesInCycle());
@@ -211,6 +211,7 @@ public class WindSpeedView extends View {
             }
         }
 
+        stobservations.add(Calendar.HOUR_OF_DAY, -13);
         double maxtmp = -1;
         max = 0;
         int pointamount;
@@ -220,7 +221,7 @@ public class WindSpeedView extends View {
                     maxtmp = forecast.get(a).getWindspeed()[loop];
             }
             int oblength = observations.get(a).getStep().length;
-            pointamount = pointamountcounter(observations.get(a).minutesInCycle(), observations.get(a).getStep()[oblength - 1]);
+            pointamount = pointamountcounter(observations.get(a).minutesInCycle(), observations.get(a).getStep()[oblength - 1], stobservations.getTime());
             for (loop = 1; loop <= pointamount; loop++) {
                 if (observations.get(a).getWindspeed()[oblength - loop] > maxtmp)
                     maxtmp = observations.get(a).getWindspeed()[oblength - loop];
@@ -243,7 +244,7 @@ public class WindSpeedView extends View {
         for(int a=0 ; a<observations.size() ; a++) {
             if(changeindex == -1 || changeindex == a) {
                 int oblength = observations.get(a).getStep().length;
-                pointamount = pointamountcounter(observations.get(a).minutesInCycle(), observations.get(a).getStep()[oblength - 1]);
+                pointamount = pointamountcounter(observations.get(a).minutesInCycle(), observations.get(a).getStep()[oblength - 1],stobservations.getTime());
                 if (observations.size() > 1)
                     paint.setColor(place_colors[a]);
                 else
@@ -266,8 +267,8 @@ public class WindSpeedView extends View {
         }
     }
 
-    private int pointamountcounter(int d, Date date2){
-        return 5 * 60 / d + date2.getMinutes() / d;
+    private int pointamountcounter(int d, Date date2, Date forecastdate){
+        return (int)(date2.getTime() - forecastdate.getTime()) / (d * 60000);
     }
 
     private void drawNormal(Canvas canvas) {
@@ -463,8 +464,12 @@ public class WindSpeedView extends View {
         protected void onPreExecute()
         {
             changeindex = -1;
-            progressDialog = ProgressDialog.show(context, getResources().getString(R.string.app_name),
-                    getResources().getString(R.string.download_text), true);
+            progressDialog = new ProgressDialog(context);
+            progressDialog.setMax(100);
+            progressDialog.setMessage(getResources().getString(R.string.download_text));
+            progressDialog.setTitle(getResources().getString(R.string.app_name));
+            progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+            progressDialog.show();
         };
 
         protected String doInBackground(String... urls) {
@@ -487,17 +492,23 @@ public class WindSpeedView extends View {
         try {
             if(place.length() > 0)
                 weatherplace = place.split("\n");
+            int prosent = 100 / (weatherplace.length*2);
+
             observations.clear();
-            for (int loop = 0; loop < weatherplace.length; loop++)
+            for (int loop = 0; loop < weatherplace.length; loop++) {
                 observations.add(readWeather("http://data.fmi.fi/fmi-apikey/" + apikey + "/wfs?request=getFeature&storedquery_id=fmi::observations::weather::timevaluepair&place="
                         + weatherplace[loop] + "&parameters=windspeedms,WindDirection,wg_10min,temperature"));
-
+                progressDialog.incrementProgressBy(prosent);
+            }
             if(place.length() > 0 || forecast.size() == 0 || forecast.get(0).getStep()[0].before(observations.get(0).getStep()[observations.get(0).getStep().length-1])){
                 forecast.clear();
-                for (int loop = 0; loop < weatherplace.length; loop++)
+                for (int loop = 0; loop < weatherplace.length; loop++) {
                     forecast.add(readWeather("http://data.fmi.fi/fmi-apikey/" + apikey + "/wfs?request=getFeature&storedquery_id=fmi::forecast::hirlam::surface::point::timevaluepair&place="
                             + weatherplace[loop] + "&parameters=windspeedms,WindDirection,weathersymbol3,temperature"));
-            }
+                    progressDialog.incrementProgressBy(prosent);
+                }
+            } else
+                progressDialog.incrementProgressBy(prosent * weatherplace.length);
 
         } catch (Exception e) {
             e.printStackTrace();
