@@ -6,19 +6,10 @@
             android:title="@string/pref_user_key"
             android:summary="@string/pref_user_keyinfo"
             android:key="prefUserkey"/>
-        <EditTextPreference
+        <com.hardis.aki.fastwind.ObservationSettingsPreference
             android:title="@string/pref_user_obserstation"
             android:summary="@string/pref_user_obserstationinfo"
-            android:key="prefUserObservationStation"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:gravity="top|left"
-            android:inputType="textMultiLine"
-            android:lines="20"
-            android:minLines="3"
-            android:scrollHorizontally="false"
-            android:scrollbars="vertical"
-            android:singleLine="false" />
+            android:key="prefUserObservationStation"/>
         />
     </PreferenceCategory>
 </PreferenceScreen>

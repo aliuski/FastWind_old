@@ -11,12 +11,15 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 
+import java.util.ArrayList;
+import java.util.List;
+
 
 public class MainActivity extends ActionBarActivity {
 
-    private static final int RESULT_SETTINGS = 1;
+    private SharedPreferences.OnSharedPreferenceChangeListener prefListener;
     private WindSpeedView windscreens;
-    private String t2[];
+    private String prefUserObservationStation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,23 +50,29 @@ public class MainActivity extends ActionBarActivity {
                     case MotionEvent.ACTION_MOVE:
                         if(move){
                             if((int)Math.abs(X - _xDelta) > 5) {
-                                if (windscreens.getDrawType() == WindSpeedView.MEASURED_WIND && (_xDelta > X))
-                                    windscreens.setDrawType(WindSpeedView.MEASURED_AND_FORECAST_WIND);
-                                else if (windscreens.getDrawType() == WindSpeedView.MEASURED_AND_FORECAST_WIND && (_xDelta > X))
-                                    windscreens.setDrawType(WindSpeedView.FORECAST_WIND);
-                                else if (windscreens.getDrawType() == WindSpeedView.FORECAST_WIND && (_xDelta < X))
-                                    windscreens.setDrawType(WindSpeedView.MEASURED_AND_FORECAST_WIND);
-                                else if (windscreens.getDrawType() == WindSpeedView.MEASURED_AND_FORECAST_WIND && (_xDelta < X))
-                                    windscreens.setDrawType(WindSpeedView.MEASURED_WIND);
-                                else if (windscreens.getDrawType() == WindSpeedView.FORECAST_WIND && (_xDelta > X))
-                                    windscreens.setDrawType(WindSpeedView.MEASURED_TEMPATURE);
-                                else if (windscreens.getDrawType() == WindSpeedView.FORECAST_TEMPATURE && (_xDelta < X))
-                                    windscreens.setDrawType(WindSpeedView.MEASURED_TEMPATURE);
-                                else if (windscreens.getDrawType() == WindSpeedView.MEASURED_TEMPATURE && (_xDelta > X))
-                                    windscreens.setDrawType(WindSpeedView.FORECAST_TEMPATURE);
-                                else if (windscreens.getDrawType() == WindSpeedView.MEASURED_TEMPATURE && (_xDelta < X))
-                                    windscreens.setDrawType(WindSpeedView.FORECAST_WIND);
-
+                                if(windscreens.isForecast()) {
+                                    if (windscreens.getDrawType() == WindSpeedView.MEASURED_WIND && (_xDelta > X))
+                                        windscreens.setDrawType(WindSpeedView.MEASURED_AND_FORECAST_WIND);
+                                    else if (windscreens.getDrawType() == WindSpeedView.MEASURED_AND_FORECAST_WIND && (_xDelta > X))
+                                        windscreens.setDrawType(WindSpeedView.FORECAST_WIND);
+                                    else if (windscreens.getDrawType() == WindSpeedView.FORECAST_WIND && (_xDelta < X))
+                                        windscreens.setDrawType(WindSpeedView.MEASURED_AND_FORECAST_WIND);
+                                    else if (windscreens.getDrawType() == WindSpeedView.MEASURED_AND_FORECAST_WIND && (_xDelta < X))
+                                        windscreens.setDrawType(WindSpeedView.MEASURED_WIND);
+                                    else if (windscreens.getDrawType() == WindSpeedView.FORECAST_WIND && (_xDelta > X))
+                                        windscreens.setDrawType(WindSpeedView.MEASURED_TEMPATURE);
+                                    else if (windscreens.getDrawType() == WindSpeedView.FORECAST_TEMPATURE && (_xDelta < X))
+                                        windscreens.setDrawType(WindSpeedView.MEASURED_TEMPATURE);
+                                    else if (windscreens.getDrawType() == WindSpeedView.MEASURED_TEMPATURE && (_xDelta > X))
+                                        windscreens.setDrawType(WindSpeedView.FORECAST_TEMPATURE);
+                                    else if (windscreens.getDrawType() == WindSpeedView.MEASURED_TEMPATURE && (_xDelta < X))
+                                        windscreens.setDrawType(WindSpeedView.FORECAST_WIND);
+                                } else {
+                                    if (windscreens.getDrawType() == WindSpeedView.MEASURED_WIND && (_xDelta > X))
+                                        windscreens.setDrawType(WindSpeedView.MEASURED_TEMPATURE);
+                                    else if (windscreens.getDrawType() == WindSpeedView.MEASURED_TEMPATURE && (_xDelta < X))
+                                        windscreens.setDrawType(WindSpeedView.MEASURED_WIND);
+                                }
                             } else if((int)Math.abs(Y - _yDelta) > 5) {
                                 windscreens.changeIndex(_yDelta > Y);
                             }
@@ -79,14 +88,24 @@ public class MainActivity extends ActionBarActivity {
                 .getDefaultSharedPreferences(this);
 
         windscreens.setApikey(sharedPrefs.getString("prefUserkey",null));
-        String t = sharedPrefs.getString("prefUserObservationStation", null);
-        if(t != null)
-            t2 = t.split("\n");
+        prefUserObservationStation = sharedPrefs.getString("prefUserObservationStation", null);
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        prefListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
+            public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
+                prefUserObservationStation = prefs.getString("prefUserObservationStation",null);
+                invalidateOptionsMenu();
+            }
+        };
+        prefs.registerOnSharedPreferenceChangeListener(prefListener);
 
         if(savedInstanceState != null)
             windscreens.getBundleData(savedInstanceState);
-        else if(t2 != null)
-            windscreens.setPlace(getProbePlaceList(0));
+        else {
+            List<String> l = getObservationList();
+            if(l.size()>0)
+                windscreens.setPlace(getProbePlaceList(l.get(0)));
+         }
     }
 
     @Override
@@ -109,20 +128,18 @@ public class MainActivity extends ActionBarActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-
         int id = item.getItemId();
-
         if (id == R.id.action_settings) {
-            Intent i = new Intent(this, UserSettingActivity.class);
-            startActivityForResult(i, RESULT_SETTINGS);
+            Intent intent = new Intent();
+            intent.setClass(MainActivity.this, SetPreferenceActivity.class);
+            startActivityForResult(intent, 0);
             return true;
         } else if (id == R.id.action_favorite) {
-            registerForContextMenu(windscreens);//When wanna use Options menu to open a context menu
-            openContextMenu(windscreens);//Call register for context menu thing
+            registerForContextMenu(windscreens);
+            openContextMenu(windscreens);
             unregisterForContextMenu(windscreens);
             return true;
         }
-
         return super.onOptionsItemSelected(item);
     }
 
@@ -130,34 +147,47 @@ public class MainActivity extends ActionBarActivity {
     public void onCreateContextMenu(ContextMenu menu, View v,ContextMenu.ContextMenuInfo menuInfo) {
         super.onCreateContextMenu(menu, v, menuInfo);
         menu.setHeaderTitle(R.string.action_favorite);
-        if(t2!=null){
-            for (int loop = 0; loop < t2.length; loop++) {
-                if(t2[loop].charAt(0) != '*')
-                    menu.add(0, loop, 0, t2[loop]);
-            }
-        }
+        List<String> l = getObservationList();
+        for(int i=0 ; i<l.size() ; i++)
+            menu.add(0, i, 0, l.get(i));
     }
 
     @Override
     public boolean onContextItemSelected(MenuItem item) {
-        windscreens.setPlace(getProbePlaceList(item.getItemId()));
+        windscreens.setPlace(getProbePlaceList(item.getTitle().toString()));
         return true;
     }
 
-    private String getProbePlaceList(int index){
-        if(((index+1) < t2.length) && (t2[index].charAt(0) != '*') && (t2[index+1].charAt(0) == '*')) {
-            String ret = "";
-            for (int loop = index+1; loop < t2.length; loop++) {
-                if(t2[loop].charAt(0) != '*')
-                    break;
-                ret += t2[loop].substring(1) + "\n";
+    private String getProbePlaceList(String value){
+        String out = "";
+        if(prefUserObservationStation != null && !prefUserObservationStation.isEmpty()) {
+            String[] row = prefUserObservationStation.split("\n");
+            for (int i = 0; i < row.length; i++) {
+                String column[] = row[i].split(";");
+                if(column[0].equals(value) || column[2].equals(value)) {
+                    if(!out.isEmpty())
+                        out += '\n';
+                    out += row[i];
+                }
             }
-            return ret;
-        } else {
-            if(t2[index].charAt(0) == '*')
-                return t2[index].substring(1);
-            else
-                return t2[index];
         }
+        return out;
+    }
+
+    private List<String> getObservationList(){
+        ArrayList<String> list = new ArrayList<String>();
+        if(prefUserObservationStation != null && !prefUserObservationStation.isEmpty()) {
+            String[] row = prefUserObservationStation.split("\n");
+            for (int i = 0; i < row.length; i++) {
+                String column[] = row[i].split(";");
+                if(column[2].isEmpty())
+                    list.add(column[0]);
+                else {
+                    if(!list.contains(column[2]))
+                        list.add(column[2]);
+                }
+            }
+        }
+        return list;
     }
 }

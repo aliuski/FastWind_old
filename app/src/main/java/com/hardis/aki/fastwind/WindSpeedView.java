@@ -12,7 +12,6 @@ import android.graphics.Rect;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
@@ -50,7 +49,8 @@ public class WindSpeedView extends View {
             {52, R.drawable.p52}, {53, R.drawable.p53}, {61, R.drawable.p61}, {62, R.drawable.p62}, {63, R.drawable.p63},
             {64, R.drawable.p64}, {71, R.drawable.p71}, {72, R.drawable.p72}, {73, R.drawable.p73}, {81, R.drawable.p81},
             {82, R.drawable.p82}, {83, R.drawable.p83}};
-    private static final int place_colors[] = new int[]{Color.RED, Color.GREEN, Color.BLUE, Color.MAGENTA, Color.BLACK};
+    private static final int place_colors[] = new int[]{Color.RED, Color.GREEN, Color.BLUE, Color.MAGENTA};
+    private int forecast_place_colors[] = new int[]{Color.BLACK, Color.BLACK, Color.BLACK, Color.BLACK};
 
     private static final int MARGINALSIZE = 20;
     private static final int MARGINALSIZE2 = 40;
@@ -58,7 +58,7 @@ public class WindSpeedView extends View {
 
     private ArrayList<WeatherData> forecast = new ArrayList<WeatherData>();
     private ArrayList<WeatherData> observations = new ArrayList<WeatherData>();
-    private String weatherplace[];
+    private ArrayList<String[]> weatherplace = new ArrayList<String[]>();
     private String apikey;
 
     private int type = 0;
@@ -93,7 +93,7 @@ public class WindSpeedView extends View {
     }
 
     public void setBundleData(Bundle bundle){
-        if (forecast.size() > 0 && observations.size() > 0) {
+        if (observations.size() > 0) {
             try {
                 ByteArrayOutputStream bos = new ByteArrayOutputStream();
                 ObjectOutputStream oout = new ObjectOutputStream(bos);
@@ -121,11 +121,20 @@ public class WindSpeedView extends View {
             ByteArrayInputStream bis = new ByteArrayInputStream(sd);
             ObjectInputStream ois =
                     new ObjectInputStream(bis);
-            weatherplace = (String[]) ois.readObject();
+            weatherplace = (ArrayList<String[]>) ois.readObject();
             forecast = (ArrayList<WeatherData>) ois.readObject();
             observations = (ArrayList<WeatherData>) ois.readObject();
             bis.close();
             ois.close();
+            if(forecast.isEmpty())
+                type = MEASURED_WIND;
+            int count = 0;
+            for (int i = 0 ; i< weatherplace.size() ; i++) {
+                if(i>4)
+                    break;
+                if (weatherplace.get(i)[3].equals("true"))
+                    forecast_place_colors[count++] = place_colors[i];
+            }
 
             if(!observations.get(0).isUpdated(RELOADTIME))
                 new WeatherWebServiceTask().execute("");
@@ -133,6 +142,10 @@ public class WindSpeedView extends View {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+    }
+
+    public boolean isForecast(){
+        return !forecast.isEmpty();
     }
 
     public void setApikey(String apikey){
@@ -165,7 +178,8 @@ public class WindSpeedView extends View {
         if (sizey > sizex)
             sizey /= 3;
 
-        if (forecast.size() > 0 && observations.size() > 0) {
+        paint.setTextSize(14);
+        if (observations.size() > 0) {
             if(type == MEASURED_AND_FORECAST_WIND) {
                 canvas.drawRect(new Rect((sizex - MARGINALSIZE) / 2 + MARGINALSIZE, MARGINALSIZE, sizex, sizey), paintfill);
                 drawNowAndHistory(canvas);
@@ -215,11 +229,13 @@ public class WindSpeedView extends View {
         double maxtmp = -1;
         max = 0;
         int pointamount;
-        for(int a=0 ; a<observations.size() ; a++) {
+        for(int a=0 ; a<forecast.size() ; a++) {
             for (loop = 0; loop <= 6; loop++) {
                 if (forecast.get(a).getWindspeed()[loop] > maxtmp)
                     maxtmp = forecast.get(a).getWindspeed()[loop];
             }
+        }
+        for(int a=0 ; a<observations.size() ; a++) {
             int oblength = observations.get(a).getStep().length;
             pointamount = pointamountcounter(observations.get(a).minutesInCycle(), observations.get(a).getStep()[oblength - 1], stobservations.getTime());
             for (loop = 1; loop <= pointamount; loop++) {
@@ -245,23 +261,25 @@ public class WindSpeedView extends View {
             if(changeindex == -1 || changeindex == a) {
                 int oblength = observations.get(a).getStep().length;
                 pointamount = pointamountcounter(observations.get(a).minutesInCycle(), observations.get(a).getStep()[oblength - 1],stobservations.getTime());
-                if (observations.size() > 1)
+                if ((observations.size() > 1) && (a < 4))
                     paint.setColor(place_colors[a]);
                 else
                     paint.setColor(Color.BLACK);
-                canvas.drawText(weatherplace[a], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (a * 15), paint);
+                canvas.drawText(weatherplace.get(a)[0], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (a * 15), paint);
                 drawFigure(canvas, observations.get(a).getWindspeed(), observations.get(a).getWinddirection(), (changeindex == -1) ? (MARGINALSIZE2 + (a * 15)) : MARGINALSIZE2, pointamount, oblength - pointamount, observations.get(a).minutesInCycle());
             } else {
                 paint.setColor(Color.LTGRAY);
-                canvas.drawText(weatherplace[a], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (a * 15), paint);
+                canvas.drawText(weatherplace.get(a)[0], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (a * 15), paint);
             }
         }
         paint.setColor(Color.BLACK);
         canvas.drawText(option_arrays[type], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (observations.size() * 15), paint);
-        for(int a=0 ; a<observations.size() ; a++) {
+        for(int a=0 ; a<forecast.size() ; a++) {
             if(changeindex == -1 || changeindex == a) {
-                if (observations.size() > 1)
-                    paint.setColor(place_colors[a]);
+                if ((observations.size() > 1) && (a < 4))
+                    paint.setColor(forecast_place_colors[a]);
+                else
+                    paint.setColor(Color.BLACK);
                 drawFigure(canvas, forecast.get(a).getWindspeed(), forecast.get(a).getWinddirection(), (changeindex == -1) ? (MARGINALSIZE2 + (a * 15)) : MARGINALSIZE2, 7, 0, 0);
             }
         }
@@ -278,10 +296,14 @@ public class WindSpeedView extends View {
         int x;
 
         ArrayList<WeatherData> weatherdata;
-        if (type == FORECAST_WIND || type == FORECAST_TEMPATURE)
+        int[] temp_place_colors;
+        if (type == FORECAST_WIND || type == FORECAST_TEMPATURE) {
             weatherdata = forecast;
-        else
+            temp_place_colors = forecast_place_colors;
+        } else {
             weatherdata = observations;
+            temp_place_colors = place_colors;
+        }
 
         Date stept[] = weatherdata.get(0).getStep();
         int tempc = (int)(stept[stept.length-1].getTime() - stept[0].getTime()) / 39600000; // 3600000 * 11
@@ -291,9 +313,6 @@ public class WindSpeedView extends View {
         for (loop = 0; loop < stept.length; loop++) {
             int t = stept[loop].getHours();
             if (t % tempc == 0 && tempt != t) {
-
-//                Log.d("AML", "AML drawNormal loop="+loop+" tempc="+tempc+" tempt="+tempt +" t="+ t);
-
                 x = (int) ((double) loop * kerroin) + MARGINALSIZE;
                 if (type != MEASURED_TEMPATURE && type != FORECAST_TEMPATURE) {
                     paint.setColor(Color.BLUE);
@@ -355,11 +374,11 @@ public class WindSpeedView extends View {
                     t = weatherdata.get(a).getWindspeed();
                     at = weatherdata.get(a).getWinddirection();
                 }
-                if (weatherdata.size() > 1)
-                    paint.setColor(place_colors[a]);
+                if ((weatherdata.size() > 1) && (a < 4))
+                    paint.setColor(temp_place_colors[a]);
                 else
                     paint.setColor(Color.BLACK);
-                canvas.drawText(weatherplace[a], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (a * 15), paint);
+                canvas.drawText(weatherplace.get(a)[0], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (a * 15), paint);
 
                 drawFigure(canvas, t, at, (changeindex == -1) ? (MARGINALSIZE2 + (a * 15)) : MARGINALSIZE2, t.length, 0, 0);
                 if (type == MEASURED_WIND && (changeindex != -1 || weatherdata.size() == 1)) {
@@ -368,7 +387,7 @@ public class WindSpeedView extends View {
                 }
             } else {
                 paint.setColor(Color.LTGRAY);
-                canvas.drawText(weatherplace[a], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (a * 15), paint);
+                canvas.drawText(weatherplace.get(a)[0], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (a * 15), paint);
             }
         }
         paint.setColor(Color.BLACK);
@@ -378,15 +397,20 @@ public class WindSpeedView extends View {
     int changeindex = -1;
 
     public void changeIndex(boolean up){
-        if(observations.size() > 1){
+        int size;
+        if (type == FORECAST_WIND || type == FORECAST_TEMPATURE)
+            size = forecast.size();
+        else
+            size = observations.size();
+        if(size > 1){
             if(up){
                 changeindex++;
-                if(changeindex >= observations.size())
+                if(changeindex >= size)
                     changeindex = -1;
             } else {
                 changeindex--;
                 if(changeindex < -1)
-                    changeindex = observations.size()-1;
+                    changeindex = size-1;
             }
             invalidate();
         }
@@ -490,25 +514,43 @@ public class WindSpeedView extends View {
 
     private String readXMLdata(String place) {
         try {
-            if(place.length() > 0)
-                weatherplace = place.split("\n");
-            int prosent = 100 / (weatherplace.length*2);
+            int forecast_count = 0;
+
+            if(place.length() > 0) {
+                weatherplace.clear();
+                String[] row = place.split("\n");
+                for (int i = 0; i < row.length; i++) {
+                    String tmp[] = row[i].split(";");
+                    weatherplace.add(tmp);
+                    if(tmp[3].equals("true")) {
+                        if (forecast_count < 5)
+                            forecast_place_colors[forecast_count] = place_colors[i];
+                        forecast_count++;
+                    }
+                }
+            }
+
+            int prosent = 100 / (weatherplace.size() + forecast_count);
 
             observations.clear();
-            for (int loop = 0; loop < weatherplace.length; loop++) {
-                observations.add(readWeather("http://data.fmi.fi/fmi-apikey/" + apikey + "/wfs?request=getFeature&storedquery_id=fmi::observations::weather::timevaluepair&place="
-                        + weatherplace[loop] + "&parameters=windspeedms,WindDirection,wg_10min,temperature"));
+            for (String[] str : weatherplace) {
+                observations.add(readWeather("http://data.fmi.fi/fmi-apikey/" + apikey + "/wfs?request=getFeature&storedquery_id=fmi::observations::weather::timevaluepair&fmisid="
+                        + str[1] + "&parameters=windspeedms,WindDirection,wg_10min,temperature"));
                 progressDialog.incrementProgressBy(prosent);
+                type = MEASURED_WIND;
             }
             if(place.length() > 0 || forecast.size() == 0 || forecast.get(0).getStep()[0].before(observations.get(0).getStep()[observations.get(0).getStep().length-1])){
                 forecast.clear();
-                for (int loop = 0; loop < weatherplace.length; loop++) {
-                    forecast.add(readWeather("http://data.fmi.fi/fmi-apikey/" + apikey + "/wfs?request=getFeature&storedquery_id=fmi::forecast::hirlam::surface::point::timevaluepair&place="
-                            + weatherplace[loop] + "&parameters=windspeedms,WindDirection,weathersymbol3,temperature"));
-                    progressDialog.incrementProgressBy(prosent);
+                for (String[] str : weatherplace) {
+                    if(str[3].equals("true")) {
+                        forecast.add(readWeather("http://data.fmi.fi/fmi-apikey/" + apikey + "/wfs?request=getFeature&storedquery_id=fmi::forecast::hirlam::surface::point::timevaluepair&place="
+                                + str[0] + "&parameters=windspeedms,WindDirection,weathersymbol3,temperature"));
+                        type = 0;
+                        progressDialog.incrementProgressBy(prosent);
+                    }
                 }
             } else
-                progressDialog.incrementProgressBy(prosent * weatherplace.length);
+                progressDialog.incrementProgressBy(prosent * weatherplace.size());
 
         } catch (Exception e) {
             e.printStackTrace();

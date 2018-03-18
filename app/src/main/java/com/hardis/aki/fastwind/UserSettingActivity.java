@@ -1,17 +1,15 @@
 package com.hardis.aki.fastwind;
 
 import android.os.Bundle;
-import android.preference.PreferenceActivity;
+import android.preference.PreferenceFragment;
 
 /**
  * Created by aki on 11.10.2015.
  */
-public class UserSettingActivity extends PreferenceActivity {
+public class UserSettingActivity extends PreferenceFragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        // Load the preferences from an XML resource
         addPreferencesFromResource(R.xml.settings);
     }
 }
