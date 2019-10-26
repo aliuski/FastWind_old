@@ -87,7 +87,6 @@ public class MainActivity extends ActionBarActivity {
         SharedPreferences sharedPrefs = PreferenceManager
                 .getDefaultSharedPreferences(this);
 
-        windscreens.setApikey(sharedPrefs.getString("prefUserkey",null));
         prefUserObservationStation = sharedPrefs.getString("prefUserObservationStation", null);
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);

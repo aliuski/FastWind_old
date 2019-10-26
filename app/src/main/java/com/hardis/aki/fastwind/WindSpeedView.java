@@ -52,14 +52,13 @@ public class WindSpeedView extends View {
     private static final int place_colors[] = new int[]{Color.RED, Color.GREEN, Color.BLUE, Color.MAGENTA};
     private int forecast_place_colors[] = new int[]{Color.BLACK, Color.BLACK, Color.BLACK, Color.BLACK};
 
-    private static final int MARGINALSIZE = 20;
-    private static final int MARGINALSIZE2 = 40;
+    private static final int MARGINALSIZE = 25;
+    private static final int MARGINALSIZE2 = 50;
     private static final int RELOADTIME = 5;
 
     private ArrayList<WeatherData> forecast = new ArrayList<WeatherData>();
     private ArrayList<WeatherData> observations = new ArrayList<WeatherData>();
     private ArrayList<String[]> weatherplace = new ArrayList<String[]>();
-    private String apikey;
 
     private int type = 0;
     private int sizex;
@@ -148,10 +147,6 @@ public class WindSpeedView extends View {
         return !forecast.isEmpty();
     }
 
-    public void setApikey(String apikey){
-        this.apikey = apikey;
-    }
-
     public void setPlace(String place){
         new WeatherWebServiceTask().execute(place);
     }
@@ -178,7 +173,7 @@ public class WindSpeedView extends View {
         if (sizey > sizex)
             sizey /= 3;
 
-        paint.setTextSize(14);
+        paint.setTextSize(16);
         if (observations.size() > 0) {
             if(type == MEASURED_AND_FORECAST_WIND) {
                 canvas.drawRect(new Rect((sizex - MARGINALSIZE) / 2 + MARGINALSIZE, MARGINALSIZE, sizex, sizey), paintfill);
@@ -534,7 +529,7 @@ public class WindSpeedView extends View {
 
             observations.clear();
             for (String[] str : weatherplace) {
-                observations.add(readWeather("http://data.fmi.fi/fmi-apikey/" + apikey + "/wfs?request=getFeature&storedquery_id=fmi::observations::weather::timevaluepair&fmisid="
+                observations.add(readWeather("http://opendata.fmi.fi/wfs?request=getFeature&storedquery_id=fmi::observations::weather::timevaluepair&fmisid="
                         + str[1] + "&parameters=windspeedms,WindDirection,wg_10min,temperature"));
                 progressDialog.incrementProgressBy(prosent);
                 type = MEASURED_WIND;
@@ -543,7 +538,7 @@ public class WindSpeedView extends View {
                 forecast.clear();
                 for (String[] str : weatherplace) {
                     if(str[3].equals("true")) {
-                        forecast.add(readWeather("http://data.fmi.fi/fmi-apikey/" + apikey + "/wfs?request=getFeature&storedquery_id=fmi::forecast::hirlam::surface::point::timevaluepair&place="
+                        forecast.add(readWeather("http://opendata.fmi.fi/wfs?request=getFeature&storedquery_id=fmi::forecast::hirlam::surface::point::timevaluepair&place="
                                 + str[0] + "&parameters=windspeedms,WindDirection,weathersymbol3,temperature"));
                         type = 0;
                         progressDialog.incrementProgressBy(prosent);

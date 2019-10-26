@@ -2,10 +2,6 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent">
     <PreferenceCategory android:title="@string/pref_user_profile" >
-        <EditTextPreference
-            android:title="@string/pref_user_key"
-            android:summary="@string/pref_user_keyinfo"
-            android:key="prefUserkey"/>
         <com.hardis.aki.fastwind.ObservationSettingsPreference
             android:title="@string/pref_user_obserstation"
             android:summary="@string/pref_user_obserstationinfo"

@@ -1,9 +1,8 @@
 <resources>
+
     <string name="app_name">FastWind</string>
     <string name="action_settings">Asetukset</string>
     <string name="pref_user_profile">Käyttäjän profiili</string>
-    <string name="pref_user_key">Tunnisteavain fmi-apikey</string>
-    <string name="pref_user_keyinfo">Rekisteröitymisen yhteydessä Fmi-palvelusta saatava tunnisteavain.</string>
     <string name="pref_user_obserstation">Alasvetovalikkoon tulevat sää asemat</string>
     <string name="pref_user_obserstationinfo">Käytössä olevat sääasemat löytyvät: http://ilmatieteenlaitos.fi/havaintoasemat</string>
     <string name="download_text">Ennustetta ladataan...</string>
