@@ -32,6 +32,9 @@ public class ObservationSettingsPreference  extends DialogPreference{
     private EditText editGroupName;
     private CheckBox checkBox;
     private boolean newEditStatus;
+    private Spinner stationtypeSpinner;
+    private EditText editStationPassword;
+
 
     public ObservationSettingsPreference(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -49,6 +52,8 @@ public class ObservationSettingsPreference  extends DialogPreference{
         editGroupName = (EditText) view.findViewById(R.id.editGroupName);
         checkBox = (CheckBox) view.findViewById(R.id.checkBox);
         sItems = (Spinner) view.findViewById(R.id.tableSpinner);
+        stationtypeSpinner = (Spinner) view.findViewById(R.id.stationtypeSpinner);
+        editStationPassword = (EditText) view.findViewById(R.id.editStationPassword);
 
         adapter = new ArrayAdapter<String>(
                 view.getContext(), android.R.layout.simple_spinner_item, spinnerArray);
@@ -90,14 +95,16 @@ public class ObservationSettingsPreference  extends DialogPreference{
             public void onClick(View view) {
                 if(editName.getText().toString().isEmpty() || editName.getText().toString().indexOf(';') != -1
                         || editSidName.getText().toString().isEmpty()
-                        || editGroupName.getText().toString().indexOf(';') != -1)
+                        || editGroupName.getText().toString().indexOf(';') != -1
+                        || editStationPassword.getText().toString().indexOf(';') != -1)
                     return;
                 int index = (int)sItems.getSelectedItemPosition();
-                String tmp[] = new String[3];
+                String tmp[] = new String[5];
                 tmp[0] = editSidName.getText().toString();
                 tmp[1] = editGroupName.getText().toString();
                 tmp[2] = checkBox.isChecked() ? "true" : "false";
-
+                tmp[3] = (String)stationtypeSpinner.getSelectedItem();
+                tmp[4] = editStationPassword.getText().toString();
                 if(newEditStatus) {
                     dataArray.add(index,tmp);
                     spinnerArray.add(index+1,editName.getText().toString());
@@ -122,14 +129,34 @@ public class ObservationSettingsPreference  extends DialogPreference{
                     clearInputField();
                     enableInputs(false);
                 } else {
-                    enableInputs(true);
                     String tmp[] = (String[]) dataArray.get(position-1);
                     editSidName.setText(tmp[0]);
                     editGroupName.setText(tmp[1]);
                     checkBox.setChecked(tmp[2].equals("true"));
+                    if(tmp[3].equals("Fmi")) {
+                        stationtypeSpinner.setSelection(0);
+                        editStationPassword.setEnabled(false);
+                    } else {
+                        stationtypeSpinner.setSelection(1);
+                        editStationPassword.setText(tmp[4]);
+                    }
                     editName.setText(spinnerArray.get(position));
+                    enableInputs(true);
                 }
                 newEditStatus = false;
+            }
+            @Override
+            public void onNothingSelected(AdapterView<?> parentView) {
+            }
+        });
+        stationtypeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
+                if(position == 0){
+                    editStationPassword.setEnabled(false);
+                    editStationPassword.setText("");
+                } else
+                    editStationPassword.setEnabled(true);
             }
             @Override
             public void onNothingSelected(AdapterView<?> parentView) {
@@ -143,6 +170,7 @@ public class ObservationSettingsPreference  extends DialogPreference{
         editSidName.setText("");
         editGroupName.setText("");
         checkBox.setChecked(false);
+        editStationPassword.setText("");
     }
 
     private void enableInputs(boolean set){
@@ -150,6 +178,9 @@ public class ObservationSettingsPreference  extends DialogPreference{
         editSidName.setEnabled(set);
         editGroupName.setEnabled(set);
         checkBox.setEnabled(set);
+        stationtypeSpinner.setEnabled(set);
+        if(!set)
+            editStationPassword.setEnabled(false);
     }
 
     @Override
@@ -169,10 +200,16 @@ public class ObservationSettingsPreference  extends DialogPreference{
             String[] row = value.split("\n");
             for (int i = 0; i < row.length; i++) {
                 String column[] = row[i].split(";");
-                String tmp[] = new String[3];
-                tmp[0] = column[1];
-                tmp[1] = column[2];
-                tmp[2] = column[3];
+                String tmp[] = new String[5];
+                try {
+                    tmp[0] = column[1];
+                    tmp[1] = column[2];
+                    tmp[2] = column[3];
+                    tmp[3] = column[4];
+                    tmp[4] = column[5];
+//                tmp[3] = "Fmi";
+//                tmp[4] = "";
+                } catch(Exception e){}
                 dataArray.add(tmp);
                 spinnerArray.add(column[0]);
             }
@@ -187,7 +224,7 @@ public class ObservationSettingsPreference  extends DialogPreference{
                 String tmp[] = dataArray.get(i);
                 if(!value.isEmpty())
                     value += '\n';
-                value += spinnerArray.get(i+1) +';'+ tmp[0] +';'+ tmp[1] +';'+ tmp[2];
+                value += spinnerArray.get(i+1) +';'+ tmp[0] +';'+ tmp[1] +';'+ tmp[2] +';'+ tmp[3] +';'+ tmp[4];
             }
             persistString(value);
         }

@@ -12,33 +12,31 @@ import android.graphics.Rect;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.Vector;
+import java.util.TimeZone;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
+import com.hardis.aki.fastwind.datasource.WeatherData;
+import com.hardis.aki.fastwind.datasource.Fmi;
+import com.hardis.aki.fastwind.datasource.WindGuru;
 
 /**
  * Created by aki on 12.10.2015.
  */
 
 public class WindSpeedView extends View {
-    public static final int MEASURED_AND_FORECAST_WIND = 0;
-    public static final int MEASURED_WIND = 1;
+    public static final int MEASURED_WIND = 0;
+    public static final int MEASURED_AND_FORECAST_WIND = 1;
     public static final int FORECAST_WIND = 2;
     public static final int MEASURED_TEMPATURE = 3;
     public static final int FORECAST_TEMPATURE = 4;
@@ -51,6 +49,7 @@ public class WindSpeedView extends View {
             {82, R.drawable.p82}, {83, R.drawable.p83}};
     private static final int place_colors[] = new int[]{Color.RED, Color.GREEN, Color.BLUE, Color.MAGENTA};
     private int forecast_place_colors[] = new int[]{Color.BLACK, Color.BLACK, Color.BLACK, Color.BLACK};
+    private static final long HOUR12 = 3600*12000;
 
     private static final int MARGINALSIZE = 25;
     private static final int MARGINALSIZE2 = 50;
@@ -60,6 +59,7 @@ public class WindSpeedView extends View {
     private ArrayList<WeatherData> observations = new ArrayList<WeatherData>();
     private ArrayList<String[]> weatherplace = new ArrayList<String[]>();
 
+    private Date startDate;
     private int type = 0;
     private int sizex;
     private int sizey;
@@ -69,6 +69,9 @@ public class WindSpeedView extends View {
     private double max = 0;
     private double min = 0;
     private String[] option_arrays;
+    SimpleDateFormat dateFormat;
+    SimpleDateFormat fmiformat;
+    SimpleDateFormat windguruformat;
 
     public WindSpeedView(Context context) {
         super(context);
@@ -89,6 +92,10 @@ public class WindSpeedView extends View {
         paintfill.setStyle(Paint.Style.FILL);
         Resources res = getResources();
         option_arrays = res.getStringArray(R.array.option_arrays);
+        dateFormat = new SimpleDateFormat("dd'.'MM'.'");
+        fmiformat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm':00Z'");
+        fmiformat.setTimeZone(TimeZone.getTimeZone("GMT"));
+        windguruformat = new SimpleDateFormat("yyyy-MM-dd'+'HH:mm':00'");
     }
 
     public void setBundleData(Bundle bundle){
@@ -125,7 +132,7 @@ public class WindSpeedView extends View {
             observations = (ArrayList<WeatherData>) ois.readObject();
             bis.close();
             ois.close();
-            if(forecast.isEmpty())
+            if(forecast.isEmpty() && type >= 0)
                 type = MEASURED_WIND;
             int count = 0;
             for (int i = 0 ; i< weatherplace.size() ; i++) {
@@ -148,16 +155,21 @@ public class WindSpeedView extends View {
     }
 
     public void setPlace(String place){
+        forecast.clear();
         new WeatherWebServiceTask().execute(place);
     }
 
     public void setStart() {
-        if (observations.size() > 0 && !observations.get(0).isUpdated(RELOADTIME))
+        if (observations.size() > 0 && !observations.get(0).isUpdated(RELOADTIME)) {
+            type = MEASURED_WIND;
             new WeatherWebServiceTask().execute("");
+        }
     }
 
-    public void setDrawType(int type) {
-        this.type = type;
+    public void setDrawType(int newtype) {
+        if(newtype < 0 || (newtype == 0 && this.type < 0))
+            new WeatherWebServiceTask().execute("");
+        this.type = newtype;
         invalidate();
     }
 
@@ -211,8 +223,10 @@ public class WindSpeedView extends View {
             stobservations.add(Calendar.HOUR_OF_DAY, 1);
             paint.setColor(Color.BLUE);
             if (loop < 6) {
-                index = observations.get(0).getTempature().length - (6 * 60 / observations.get(0).minutesInCycle()) + loop * (60 / observations.get(0).minutesInCycle());
-                canvas.drawText((int) (observations.get(0).getTempature()[index] + 0.5) + "°", x, sizey - MARGINALSIZE, paint);
+                if(observations.get(0).getTempature() != null) {
+                    index = observations.get(0).getTempature().length - (6 * 60 / observations.get(0).minutesInCycle()) + loop * (60 / observations.get(0).minutesInCycle());
+                    canvas.drawText((int) (observations.get(0).getTempature()[index] + 0.5) + "°", x, sizey - MARGINALSIZE, paint);
+                }
             } else {
                 index = loop - 6;
                 canvas.drawText((int) (forecast.get(0).getTempature()[index] + 0.5) + "°", x, sizey - MARGINALSIZE, paint);
@@ -309,7 +323,7 @@ public class WindSpeedView extends View {
             int t = stept[loop].getHours();
             if (t % tempc == 0 && tempt != t) {
                 x = (int) ((double) loop * kerroin) + MARGINALSIZE;
-                if (type != MEASURED_TEMPATURE && type != FORECAST_TEMPATURE) {
+                if (type != MEASURED_TEMPATURE && type != FORECAST_TEMPATURE && weatherdata.get(0).getTempature() != null) {
                     paint.setColor(Color.BLUE);
                     canvas.drawText((int) (weatherdata.get(0).getTempature()[loop] + 0.5) + "°", x, sizey - MARGINALSIZE, paint);
                 }
@@ -326,9 +340,11 @@ public class WindSpeedView extends View {
         for(int a=0 ; a<weatherdata.size() ; a++) {
             if(changeindex == -1 || changeindex == a) {
                 double t[];
-                if (type == MEASURED_TEMPATURE || type == FORECAST_TEMPATURE)
+                if (type == MEASURED_TEMPATURE || type == FORECAST_TEMPATURE) {
                     t = weatherdata.get(a).getTempature();
-                else if (type == MEASURED_WIND)
+                    if(t == null)
+                        continue;
+                } else if (type <= 0)
                     t = weatherdata.get(a).getWindspeedwg();
                 else
                     t = weatherdata.get(a).getWindspeed();
@@ -350,20 +366,28 @@ public class WindSpeedView extends View {
 
         double ty = (double) (sizey - MARGINALSIZE) / 5.0;
         for (loop = 0; loop < 6; loop++) {
-            int y = sizey - MARGINALSIZE - (int) ((double) loop * ty) + MARGINALSIZE;
+//            int y = sizey - MARGINALSIZE - (int) ((double) loop * ty) + MARGINALSIZE;
+            int y = sizey - (int) ((double) loop * ty);
             paint.setColor(Color.GRAY);
             canvas.drawLine(MARGINALSIZE, y, sizex, y, paint);
             paint.setColor(Color.BLACK);
             int ms = (int) (min + (max - min) / 5.0 * loop);
             canvas.drawText("" + ms, 5, y, paint);
         }
-
+        if(min < 0 && max > 0){
+            int y = sizey + (int)((min / (max - min)) * (double)sizey) + MARGINALSIZE/2;
+            canvas.drawText("0", 5, y, paint);
+            paint.setColor(Color.GRAY);
+            canvas.drawLine(MARGINALSIZE, y, sizex, y, paint);
+        }
         for(int a=0 ; a<weatherdata.size() ; a++) {
             if(changeindex == -1 || changeindex == a) {
                 double t[];
-                double at[];
+                int at[];
                 if (type == MEASURED_TEMPATURE || type == FORECAST_TEMPATURE) {
                     t = weatherdata.get(a).getTempature();
+                    if(t == null)
+                        continue;
                     at = null;
                 } else {
                     t = weatherdata.get(a).getWindspeed();
@@ -376,7 +400,7 @@ public class WindSpeedView extends View {
                 canvas.drawText(weatherplace.get(a)[0], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (a * 15), paint);
 
                 drawFigure(canvas, t, at, (changeindex == -1) ? (MARGINALSIZE2 + (a * 15)) : MARGINALSIZE2, t.length, 0, 0);
-                if (type == MEASURED_WIND && (changeindex != -1 || weatherdata.size() == 1)) {
+                if (type <= 0 && (changeindex != -1 || weatherdata.size() == 1)) {
                     paint.setColor(Color.LTGRAY);
                     drawFigure(canvas, weatherdata.get(a).getWindspeedwg(), null, 0, weatherdata.get(a).getWindspeedwg().length, 0, 0);
                 }
@@ -386,7 +410,7 @@ public class WindSpeedView extends View {
             }
         }
         paint.setColor(Color.BLACK);
-        canvas.drawText(option_arrays[type], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (weatherdata.size() * 15), paint);
+        canvas.drawText(type < 0 ? (option_arrays[0]+" "+dateFormat.format(startDate)) : option_arrays[type], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (weatherdata.size() * 15), paint);
     }
 
     int changeindex = -1;
@@ -436,7 +460,7 @@ public class WindSpeedView extends View {
         canvas.drawBitmap(sBitmap, tmpx - 10, sizey + 15, paint);
     }
 
-    private void drawFigure(Canvas canvas, double wave[], double angle[], int angley, int points, int offset, int minutesInCycle){
+    private void drawFigure(Canvas canvas, double wave[], int angle[], int angley, int points, int offset, int minutesInCycle){
         int siirra;
         double kerroin;
         int loop;
@@ -471,7 +495,7 @@ public class WindSpeedView extends View {
             for (loop = 0; loop <= pointa; loop++) {
                 double ai = length / (double)pointa * (double)loop;
                 int index = (int) ((ai / length * (double) (points - 1)) + 0.5);
-                drewAngle(canvas, angle[index + offset], (int)ai + siirra, angley);
+                drewAngle(canvas, (double)angle[index + offset], (int)ai + siirra, angley);
             }
         }
     }
@@ -510,7 +534,7 @@ public class WindSpeedView extends View {
     private String readXMLdata(String place) {
         try {
             int forecast_count = 0;
-
+            Log.i("AML","AML place=" + place);
             if(place.length() > 0) {
                 weatherplace.clear();
                 String[] row = place.split("\n");
@@ -527,20 +551,40 @@ public class WindSpeedView extends View {
 
             int prosent = 100 / (weatherplace.size() + forecast_count);
 
+            Date endDate;
+            if(type >= 0){
+                endDate = new Date();
+                startDate = new Date(endDate.getTime() - HOUR12);
+            } else {
+                Date nowtime = new Date();
+                startDate = new Date(nowtime.getTime() + HOUR12 * (type - 1));
+                endDate = new Date(nowtime.getTime() + HOUR12 * type);
+            }
+
             observations.clear();
             for (String[] str : weatherplace) {
-                observations.add(readWeather("http://opendata.fmi.fi/wfs?request=getFeature&storedquery_id=fmi::observations::weather::timevaluepair&fmisid="
-                        + str[1] + "&parameters=windspeedms,WindDirection,wg_10min,temperature"));
+                if(str[4].equals("Fmi")) {
+                    observations.add(new Fmi("http://opendata.fmi.fi/wfs?request=getFeature&storedquery_id=fmi::observations::weather::timevaluepair&fmisid="
+                            + str[1] + "&starttime=" + fmiformat.format(startDate) + "&endtime=" + fmiformat.format(endDate) + "&parameters=windspeedms,WindDirection,wg_10min,temperature"));
+                } else {
+                    if (type >= 0)
+                        observations.add(new WindGuru("https://www.windguru.cz/int/wgsapi.php?id_station="+str[1]+"&password="+str[5]+"&q=station_data_last&hours=12&avg_minutes=5&vars=wind_avg,wind_max,wind_direction"));
+                    else
+                        observations.add(new WindGuru("https://www.windguru.cz/int/wgsapi.php?id_station="+str[1]+"&password="+str[5]+"&q=station_data&from="
+                                + windguruformat.format(startDate) + "&to=" + windguruformat.format(endDate) + "&vars=wind_avg,wind_max,wind_direction"));
+                }
                 progressDialog.incrementProgressBy(prosent);
-                type = MEASURED_WIND;
+                if(type >= 0)
+                    type = MEASURED_WIND;
             }
-            if(place.length() > 0 || forecast.size() == 0 || forecast.get(0).getStep()[0].before(observations.get(0).getStep()[observations.get(0).getStep().length-1])){
+
+            if((type >= 0) && (place.length() > 0 || forecast.size() == 0 || forecast.get(0).getStep()[0].before(observations.get(0).getStep()[observations.get(0).getStep().length-1]))){
                 forecast.clear();
                 for (String[] str : weatherplace) {
                     if(str[3].equals("true")) {
-                        forecast.add(readWeather("http://opendata.fmi.fi/wfs?request=getFeature&storedquery_id=fmi::forecast::hirlam::surface::point::timevaluepair&place="
+                        forecast.add(new Fmi("http://opendata.fmi.fi/wfs?request=getFeature&storedquery_id=fmi::forecast::hirlam::surface::point::timevaluepair&place="
                                 + str[0] + "&parameters=windspeedms,WindDirection,weathersymbol3,temperature"));
-                        type = 0;
+                        type = MEASURED_AND_FORECAST_WIND;
                         progressDialog.incrementProgressBy(prosent);
                     }
                 }
@@ -552,55 +596,6 @@ public class WindSpeedView extends View {
             return "FALSE";
         }
         return "OK";
-    }
-
-    private WeatherData readWeather(String input) throws Exception{
-
-        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-        DocumentBuilder db = dbf.newDocumentBuilder();
-
-        Document doc = db.parse(input);
-
-        doc.getDocumentElement().normalize();
-        NodeList nodeLst = doc.getElementsByTagName("wfs:member");
-        Vector time = new Vector();
-        Vector v1 = readMember((Element) nodeLst.item(0),time);
-        Vector v2 = readMember((Element) nodeLst.item(1),null);
-        Vector v3 = readMember((Element) nodeLst.item(2),null);
-        Vector v4 = readMember((Element) nodeLst.item(3),null);
-        return new WeatherData(time,v1,v2,v3,v4);
-    }
-
-    private Vector readMember(Element element, Vector time) {
-        Vector v = new Vector();
-        NodeList nodeLst = element.getElementsByTagName("omso:PointTimeSeriesObservation");
-        element = (Element) nodeLst.item(0);
-        nodeLst = element.getElementsByTagName("om:result");
-        element = (Element) nodeLst.item(0);
-        nodeLst = element.getElementsByTagName("wml2:MeasurementTimeseries");
-        element = (Element) nodeLst.item(0);
-
-        NodeList nodeLst1 = element.getElementsByTagName("wml2:point");
-
-        for (int k = 0; k < nodeLst1.getLength(); k++) {
-            Element element1 = (Element) nodeLst1.item(k);
-
-            NodeList nodeLst2 = element1.getElementsByTagName("wml2:MeasurementTVP");
-            Element element2 = (Element) nodeLst2.item(0);
-
-            if(time != null) {
-                nodeLst2 = element2.getElementsByTagName("wml2:time");
-                element1 = (Element) nodeLst2.item(0);
-                nodeLst2 = element1.getChildNodes();
-                time.add(((Node) nodeLst2.item(0)).getNodeValue());
-            }
-            nodeLst2 = element2.getElementsByTagName("wml2:value");
-            element1 = (Element) nodeLst2.item(0);
-            nodeLst2 = element1.getChildNodes();
-
-            v.add(((Node) nodeLst2.item(0)).getNodeValue());
-        }
-        return v;
     }
 }
 

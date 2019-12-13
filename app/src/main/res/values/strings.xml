@@ -1,5 +1,4 @@
 <resources>
-
     <string name="app_name">FastWind</string>
     <string name="action_settings">Asetukset</string>
     <string name="pref_user_profile">Käyttäjän profiili</string>
@@ -17,10 +16,16 @@
     <string name="newbutton">Uusi</string>
     <string name="saved_observation_stations">Talletetut havaintoasemat</string>
     <string-array name="option_arrays">
-        <item>Mitattu ja ennuste tuuli m/s</item>
         <item>Mitattu tuuli m/s</item>
+        <item>Mitattu ja ennuste tuuli m/s</item>
         <item>Ennuste tuuli m/s</item>
         <item>Mitattu lämpötila °C</item>
         <item>Ennuste lämpötila °C</item>
     </string-array>
+    <string name="stationtype_prompt">Mittausaseman tyyppi</string>
+    <string-array name="stationtype_arrays">
+        <item>Fmi</item>
+        <item>WindGuru</item>
+    </string-array>
+    <string name="station_password">Aseman salasana</string>
 </resources>

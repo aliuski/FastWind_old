@@ -51,27 +51,19 @@ public class MainActivity extends ActionBarActivity {
                         if(move){
                             if((int)Math.abs(X - _xDelta) > 5) {
                                 if(windscreens.isForecast()) {
-                                    if (windscreens.getDrawType() == WindSpeedView.MEASURED_WIND && (_xDelta > X))
-                                        windscreens.setDrawType(WindSpeedView.MEASURED_AND_FORECAST_WIND);
-                                    else if (windscreens.getDrawType() == WindSpeedView.MEASURED_AND_FORECAST_WIND && (_xDelta > X))
-                                        windscreens.setDrawType(WindSpeedView.FORECAST_WIND);
-                                    else if (windscreens.getDrawType() == WindSpeedView.FORECAST_WIND && (_xDelta < X))
-                                        windscreens.setDrawType(WindSpeedView.MEASURED_AND_FORECAST_WIND);
-                                    else if (windscreens.getDrawType() == WindSpeedView.MEASURED_AND_FORECAST_WIND && (_xDelta < X))
-                                        windscreens.setDrawType(WindSpeedView.MEASURED_WIND);
-                                    else if (windscreens.getDrawType() == WindSpeedView.FORECAST_WIND && (_xDelta > X))
-                                        windscreens.setDrawType(WindSpeedView.MEASURED_TEMPATURE);
-                                    else if (windscreens.getDrawType() == WindSpeedView.FORECAST_TEMPATURE && (_xDelta < X))
-                                        windscreens.setDrawType(WindSpeedView.MEASURED_TEMPATURE);
-                                    else if (windscreens.getDrawType() == WindSpeedView.MEASURED_TEMPATURE && (_xDelta > X))
-                                        windscreens.setDrawType(WindSpeedView.FORECAST_TEMPATURE);
-                                    else if (windscreens.getDrawType() == WindSpeedView.MEASURED_TEMPATURE && (_xDelta < X))
-                                        windscreens.setDrawType(WindSpeedView.FORECAST_WIND);
+                                    if (_xDelta < X)
+                                        windscreens.setDrawType(windscreens.getDrawType() - 1);
+                                    else if (windscreens.getDrawType() < WindSpeedView.FORECAST_TEMPATURE && (_xDelta > X))
+                                        windscreens.setDrawType(windscreens.getDrawType() + 1);
                                 } else {
                                     if (windscreens.getDrawType() == WindSpeedView.MEASURED_WIND && (_xDelta > X))
                                         windscreens.setDrawType(WindSpeedView.MEASURED_TEMPATURE);
                                     else if (windscreens.getDrawType() == WindSpeedView.MEASURED_TEMPATURE && (_xDelta < X))
                                         windscreens.setDrawType(WindSpeedView.MEASURED_WIND);
+                                    else if (windscreens.getDrawType() <= 0 && _xDelta < X)
+                                        windscreens.setDrawType(windscreens.getDrawType() - 1);
+                                    else if (windscreens.getDrawType() <= 0 && _xDelta > X)
+                                        windscreens.setDrawType(windscreens.getDrawType() + 1);
                                 }
                             } else if((int)Math.abs(Y - _yDelta) > 5) {
                                 windscreens.changeIndex(_yDelta > Y);
@@ -163,7 +155,7 @@ public class MainActivity extends ActionBarActivity {
             String[] row = prefUserObservationStation.split("\n");
             for (int i = 0; i < row.length; i++) {
                 String column[] = row[i].split(";");
-                if(column[0].equals(value) || column[2].equals(value)) {
+                if(column[0].equals(value) && column[2].isEmpty() || column[2].equals(value)) {
                     if(!out.isEmpty())
                         out += '\n';
                     out += row[i];
