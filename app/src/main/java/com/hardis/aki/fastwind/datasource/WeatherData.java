@@ -9,33 +9,45 @@ public class WeatherData implements Serializable {
     protected double tempature[] = null;
     protected int winddirection[] = null;
     protected double windspeedwg[] = null;
-    protected int minutesincycle;
     protected Date updated;
 
-    public WeatherData(){};
+    public WeatherData() {
+    }
 
-    public Date[] getStep(){
+    public Date[] getStep() {
         return step;
     }
-    public double[] getWindspeed(){
+
+    public double[] getWindspeed() {
         return windspeed;
     }
-    public double[] getTempature(){
+
+    public double[] getTempature() {
         return tempature;
     }
-    public int[] getWinddirection(){
+
+    public int[] getWinddirection() {
         return winddirection;
     }
-    public double[] getWindspeedwg(){
+
+    public double[] getWindspeedwg() {
         return windspeedwg;
     }
-    public int minutesInCycle() { return minutesincycle;}
 
-    public boolean isUpdated(int minute){
+    public boolean isUpdated(int minute) {
         Date d = new java.util.Date();
-        if(updated == null || (d.getTime() > updated.getTime() + minute * 60000)) {
+        if (updated == null || (d.getTime() > updated.getTime() + minute * 60000)) {
             return false;
         }
         return true;
+    }
+
+    public int getIndex(Date start) {
+        for(int i = 0 ; i<step.length;i++)
+        {
+            if (step[i].compareTo(start) >= 0)
+                return i;
+        }
+        return 0;
     }
 }

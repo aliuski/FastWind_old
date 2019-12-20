@@ -67,7 +67,7 @@ public class Fmi extends WeatherData {
         return v;
     }
 
-    private void fillTables(Vector time,Vector v1,Vector v2,Vector v3,Vector v4) throws Exception {
+    private void fillTables(Vector time,Vector v1,Vector v2,Vector v3,Vector v4) {
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
         df.setTimeZone(TimeZone.getTimeZone("UTC"));
         step = new Date[v1.size()];
@@ -79,16 +79,14 @@ public class Fmi extends WeatherData {
         for (int loop = 0; loop < v1.size(); loop++) {
             try{
                 step[loop] = df.parse((String)time.get(loop));
+                windspeed[loop] = Double.parseDouble((String) v1.get(loop));
+                winddirection[loop] = (int)(Double.parseDouble((String) v2.get(loop)) + 90.0);
+                windspeedwg[loop] = Double.parseDouble((String) v3.get(loop));
+                tempature[loop] = Double.parseDouble((String) v4.get(loop));
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            windspeed[loop] = Double.parseDouble((String) v1.get(loop));
-            winddirection[loop] = (int)(Double.parseDouble((String) v2.get(loop)) + 90.0);
-            windspeedwg[loop] = Double.parseDouble((String) v3.get(loop));
-            tempature[loop] = Double.parseDouble((String) v4.get(loop));
         }
-
-        minutesincycle = (int)(step[1].getTime() - step[0].getTime()) / 60000;
         updated = new java.util.Date();
     }
 }

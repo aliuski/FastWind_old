@@ -12,7 +12,6 @@ import android.graphics.Rect;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
@@ -59,7 +58,8 @@ public class WindSpeedView extends View {
     private ArrayList<WeatherData> observations = new ArrayList<WeatherData>();
     private ArrayList<String[]> weatherplace = new ArrayList<String[]>();
 
-    private Date startDate;
+    private Date startDate = new Date();
+    private Date endDate = new Date();
     private int type = 0;
     private int sizex;
     private int sizey;
@@ -69,9 +69,10 @@ public class WindSpeedView extends View {
     private double max = 0;
     private double min = 0;
     private String[] option_arrays;
-    SimpleDateFormat dateFormat;
-    SimpleDateFormat fmiformat;
-    SimpleDateFormat windguruformat;
+    private int changeindex = -1;
+    private SimpleDateFormat dateFormat;
+    private SimpleDateFormat fmiformat;
+    private SimpleDateFormat windguruformat;
 
     public WindSpeedView(Context context) {
         super(context);
@@ -104,6 +105,9 @@ public class WindSpeedView extends View {
                 ByteArrayOutputStream bos = new ByteArrayOutputStream();
                 ObjectOutputStream oout = new ObjectOutputStream(bos);
 
+                oout.writeObject(new Integer(type));
+                oout.writeObject(startDate);
+                oout.writeObject(endDate);
                 oout.writeObject(weatherplace);
                 oout.writeObject(forecast);
                 oout.writeObject(observations);
@@ -127,6 +131,10 @@ public class WindSpeedView extends View {
             ByteArrayInputStream bis = new ByteArrayInputStream(sd);
             ObjectInputStream ois =
                     new ObjectInputStream(bis);
+
+            type = ((Integer) ois.readObject()).intValue();
+            startDate = (Date) ois.readObject();
+            endDate = (Date) ois.readObject();
             weatherplace = (ArrayList<String[]>) ois.readObject();
             forecast = (ArrayList<WeatherData>) ois.readObject();
             observations = (ArrayList<WeatherData>) ois.readObject();
@@ -209,7 +217,9 @@ public class WindSpeedView extends View {
 
         Calendar stobservations = Calendar.getInstance();
         stobservations.setTime(forecast.get(0).getStep()[0]);
+        Date this_time = stobservations.getTime();
         stobservations.add(Calendar.HOUR_OF_DAY, -6);
+        Date start_point = stobservations.getTime();
 
         double tx = (double) (sizex - MARGINALSIZE) / 12.0;
         for (loop = 0; loop < 13; loop++) {
@@ -220,36 +230,33 @@ public class WindSpeedView extends View {
             }
             paint.setColor(Color.BLACK);
             canvas.drawText("" + stobservations.get(Calendar.HOUR_OF_DAY), x, sizey + 15, paint);
-            stobservations.add(Calendar.HOUR_OF_DAY, 1);
             paint.setColor(Color.BLUE);
             if (loop < 6) {
                 if(observations.get(0).getTempature() != null) {
-                    index = observations.get(0).getTempature().length - (6 * 60 / observations.get(0).minutesInCycle()) + loop * (60 / observations.get(0).minutesInCycle());
-                    canvas.drawText((int) (observations.get(0).getTempature()[index] + 0.5) + "°", x, sizey - MARGINALSIZE, paint);
+                    canvas.drawText((int) (observations.get(0).getTempature()[observations.get(0).getIndex(stobservations.getTime())] + 0.5) + "°", x, sizey - MARGINALSIZE, paint);
                 }
             } else {
                 index = loop - 6;
                 canvas.drawText((int) (forecast.get(0).getTempature()[index] + 0.5) + "°", x, sizey - MARGINALSIZE, paint);
                 drewSymbols(canvas, (int) forecast.get(0).getWindspeedwg()[index], x);
             }
+            stobservations.add(Calendar.HOUR_OF_DAY, 1);
         }
+        Date end_time = stobservations.getTime();
 
         stobservations.add(Calendar.HOUR_OF_DAY, -13);
         double maxtmp = -1;
         max = 0;
-        int pointamount;
         for(int a=0 ; a<forecast.size() ; a++) {
-            for (loop = 0; loop <= 6; loop++) {
+            for (loop = 0 ; loop < forecast.get(a).getIndex(end_time) ; loop++) {
                 if (forecast.get(a).getWindspeed()[loop] > maxtmp)
                     maxtmp = forecast.get(a).getWindspeed()[loop];
             }
         }
         for(int a=0 ; a<observations.size() ; a++) {
-            int oblength = observations.get(a).getStep().length;
-            pointamount = pointamountcounter(observations.get(a).minutesInCycle(), observations.get(a).getStep()[oblength - 1], stobservations.getTime());
-            for (loop = 1; loop <= pointamount; loop++) {
-                if (observations.get(a).getWindspeed()[oblength - loop] > maxtmp)
-                    maxtmp = observations.get(a).getWindspeed()[oblength - loop];
+            for (loop = observations.get(a).getIndex(start_point) ; loop < observations.get(a).getStep().length ; loop++) {
+                if (observations.get(a).getWindspeed()[loop] > maxtmp)
+                    maxtmp = observations.get(a).getWindspeed()[loop];
             }
         }
 
@@ -268,14 +275,12 @@ public class WindSpeedView extends View {
 
         for(int a=0 ; a<observations.size() ; a++) {
             if(changeindex == -1 || changeindex == a) {
-                int oblength = observations.get(a).getStep().length;
-                pointamount = pointamountcounter(observations.get(a).minutesInCycle(), observations.get(a).getStep()[oblength - 1],stobservations.getTime());
                 if ((observations.size() > 1) && (a < 4))
                     paint.setColor(place_colors[a]);
                 else
                     paint.setColor(Color.BLACK);
                 canvas.drawText(weatherplace.get(a)[0], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (a * 15), paint);
-                drawFigure(canvas, observations.get(a).getWindspeed(), observations.get(a).getWinddirection(), (changeindex == -1) ? (MARGINALSIZE2 + (a * 15)) : MARGINALSIZE2, pointamount, oblength - pointamount, observations.get(a).minutesInCycle());
+                drawFigure(canvas, start_point, this_time, observations.get(a).getStep(), observations.get(a).getWindspeed(), observations.get(a).getWinddirection(), (changeindex == -1) ? (MARGINALSIZE2 + (a * 15)) : MARGINALSIZE2,1);
             } else {
                 paint.setColor(Color.LTGRAY);
                 canvas.drawText(weatherplace.get(a)[0], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (a * 15), paint);
@@ -289,13 +294,9 @@ public class WindSpeedView extends View {
                     paint.setColor(forecast_place_colors[a]);
                 else
                     paint.setColor(Color.BLACK);
-                drawFigure(canvas, forecast.get(a).getWindspeed(), forecast.get(a).getWinddirection(), (changeindex == -1) ? (MARGINALSIZE2 + (a * 15)) : MARGINALSIZE2, 7, 0, 0);
+                drawFigure(canvas, this_time, end_time, forecast.get(a).getStep(), forecast.get(a).getWindspeed(), forecast.get(a).getWinddirection(), (changeindex == -1) ? (MARGINALSIZE2 + (a * 15)) : MARGINALSIZE2, 2);
             }
         }
-    }
-
-    private int pointamountcounter(int d, Date date2, Date forecastdate){
-        return (int)(date2.getTime() - forecastdate.getTime()) / (d * 60000);
     }
 
     private void drawNormal(Canvas canvas) {
@@ -303,38 +304,55 @@ public class WindSpeedView extends View {
         double max_tmp = -100;
         double min_tmp = 100;
         int x;
-
+        Date start_point;
+        Date end_point;
+        int move = 0;
+        int move_step = 0;
         ArrayList<WeatherData> weatherdata;
+        Calendar timestep = Calendar.getInstance();
+        double kerroin = (double) (sizex - MARGINALSIZE) / 12;
+
         int[] temp_place_colors;
         if (type == FORECAST_WIND || type == FORECAST_TEMPATURE) {
+            kerroin = (double) sizex / 12.0;
             weatherdata = forecast;
             temp_place_colors = forecast_place_colors;
+            start_point = weatherdata.get(0).getStep()[0];
+            end_point = weatherdata.get(0).getStep()[weatherdata.get(0).getStep().length-1];
+            timestep.setTime(weatherdata.get(0).getStep()[0]);
+            int test = timestep.get(Calendar.HOUR_OF_DAY);
+            double d = (double)test / 3.0;
+            int i = (int)d;
+            int b = 3 - (int)((d - (double)i) * 3.0 + 0.1);
+            move = (int)(((double)b/3.0) * kerroin);
+            if(b > 0)
+                timestep.add(Calendar.HOUR_OF_DAY, b);
+            move_step = 3;
         } else {
             weatherdata = observations;
             temp_place_colors = place_colors;
+            start_point = startDate;
+            end_point = endDate;
+            timestep.setTime(start_point);
+            timestep.add(Calendar.HOUR_OF_DAY, 1);
+            move = (int)(kerroin - ((double)timestep.get(Calendar.MINUTE)/60.0) * kerroin);
+            move_step = 1;
         }
 
-        Date stept[] = weatherdata.get(0).getStep();
-        int tempc = (int)(stept[stept.length-1].getTime() - stept[0].getTime()) / 39600000; // 3600000 * 11
-        int tempt = stept[0].getHours();
-
-        double kerroin = (double) (sizex - MARGINALSIZE) / (stept.length - 1);
-        for (loop = 0; loop < stept.length; loop++) {
-            int t = stept[loop].getHours();
-            if (t % tempc == 0 && tempt != t) {
-                x = (int) ((double) loop * kerroin) + MARGINALSIZE;
-                if (type != MEASURED_TEMPATURE && type != FORECAST_TEMPATURE && weatherdata.get(0).getTempature() != null) {
-                    paint.setColor(Color.BLUE);
-                    canvas.drawText((int) (weatherdata.get(0).getTempature()[loop] + 0.5) + "°", x, sizey - MARGINALSIZE, paint);
-                }
-                paint.setColor(Color.GRAY);
-                canvas.drawLine(x, sizey - 10, x, sizey, paint);
-                paint.setColor(Color.BLACK);
-                canvas.drawText("" + t, x, sizey + 15, paint);
-                if (type == FORECAST_WIND || type == FORECAST_TEMPATURE)
-                    drewSymbols(canvas, (int)weatherdata.get(0).getWindspeedwg()[loop], x);
-                tempt = t;
+        for (loop = 0; loop < 12; loop++) {
+            int tempindex = weatherdata.get(0).getIndex(timestep.getTime());
+            x = (int) ((double) loop * kerroin) + move + MARGINALSIZE;
+            if (type != MEASURED_TEMPATURE && type != FORECAST_TEMPATURE && weatherdata.get(0).getTempature() != null) {
+                paint.setColor(Color.BLUE);
+                canvas.drawText((int) (weatherdata.get(0).getTempature()[tempindex] + 0.5) + "°", x, sizey - MARGINALSIZE, paint);
             }
+            paint.setColor(Color.GRAY);
+            canvas.drawLine(x, sizey - 10, x, sizey, paint);
+            paint.setColor(Color.BLACK);
+            canvas.drawText("" + timestep.get(Calendar.HOUR_OF_DAY), x, sizey + 15, paint);
+            if (type == FORECAST_WIND || type == FORECAST_TEMPATURE)
+                drewSymbols(canvas, (int)weatherdata.get(0).getWindspeedwg()[tempindex], x);
+            timestep.add(Calendar.HOUR_OF_DAY, move_step);
         }
 
         for(int a=0 ; a<weatherdata.size() ; a++) {
@@ -366,7 +384,6 @@ public class WindSpeedView extends View {
 
         double ty = (double) (sizey - MARGINALSIZE) / 5.0;
         for (loop = 0; loop < 6; loop++) {
-//            int y = sizey - MARGINALSIZE - (int) ((double) loop * ty) + MARGINALSIZE;
             int y = sizey - (int) ((double) loop * ty);
             paint.setColor(Color.GRAY);
             canvas.drawLine(MARGINALSIZE, y, sizex, y, paint);
@@ -398,11 +415,11 @@ public class WindSpeedView extends View {
                 else
                     paint.setColor(Color.BLACK);
                 canvas.drawText(weatherplace.get(a)[0], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (a * 15), paint);
+                drawFigure(canvas, start_point, end_point, weatherdata.get(a).getStep(), t, at, (changeindex == -1) ? (MARGINALSIZE2 + (a * 15)) : MARGINALSIZE2, 0);
 
-                drawFigure(canvas, t, at, (changeindex == -1) ? (MARGINALSIZE2 + (a * 15)) : MARGINALSIZE2, t.length, 0, 0);
                 if (type <= 0 && (changeindex != -1 || weatherdata.size() == 1)) {
                     paint.setColor(Color.LTGRAY);
-                    drawFigure(canvas, weatherdata.get(a).getWindspeedwg(), null, 0, weatherdata.get(a).getWindspeedwg().length, 0, 0);
+                    drawFigure(canvas, start_point, end_point, weatherdata.get(a).getStep(), weatherdata.get(a).getWindspeedwg(), null, 0,0);
                 }
             } else {
                 paint.setColor(Color.LTGRAY);
@@ -412,8 +429,6 @@ public class WindSpeedView extends View {
         paint.setColor(Color.BLACK);
         canvas.drawText(type < 0 ? (option_arrays[0]+" "+dateFormat.format(startDate)) : option_arrays[type], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (weatherdata.size() * 15), paint);
     }
-
-    int changeindex = -1;
 
     public void changeIndex(boolean up){
         int size;
@@ -460,43 +475,60 @@ public class WindSpeedView extends View {
         canvas.drawBitmap(sBitmap, tmpx - 10, sizey + 15, paint);
     }
 
-    private void drawFigure(Canvas canvas, double wave[], int angle[], int angley, int points, int offset, int minutesInCycle){
+    private void drawFigure(Canvas canvas, Date start_point, Date end_point, Date destination[], double wave[], int angle[], int angley, int drawtype){
         int siirra;
         double kerroin;
         int loop;
+        int start_index = 0;
+        int end_index = destination.length;
 
-        if(wave.length == points) { // Normal cases
+        if(drawtype == 0) { // Normal cases
             siirra = MARGINALSIZE;
-            kerroin = (double) (sizex - MARGINALSIZE) / (points - 1);
-        } else if(offset != 0) { // Show observation figure.
+            kerroin = (double) (sizex - MARGINALSIZE);
+        } else if(drawtype == 1) { // Show observation figure.
             siirra = MARGINALSIZE;
-            kerroin = (double) (sizex - MARGINALSIZE) / 700.0 * (double) minutesInCycle; // 2/35
+            kerroin = (double) (sizex / 2.0 - MARGINALSIZE);
+            for (loop = 0; loop < destination.length; loop++) {
+                if (destination[loop].compareTo(start_point) >= 0) {
+                    start_index = loop;
+                    break;
+                }
+            }
         } else { // Show forecast figure.
             siirra = (sizex - MARGINALSIZE) / 2 + MARGINALSIZE;
-            kerroin = ((double) (sizex - MARGINALSIZE) / 6) / 2.0;
+            kerroin = (double) (sizex / 2.0 - MARGINALSIZE);
+            for (loop = 0; loop < destination.length; loop++) {
+                if (destination[loop].compareTo(end_point) > 0) {
+                    end_index = loop;
+                    break;
+                }
+            }
         }
 
+        int points = end_index - start_index;
+        double time_length = (double)(end_point.getTime() - start_point.getTime()) / kerroin;
         int dd = (int) ((double) (sizey - MARGINALSIZE) * min / (max - min));
         float xyw[] = new float[(points - 1) * 4];
         int l2 = 0;
-        for (loop = 0; loop < points - 1; loop++) {
-            xyw[l2++] = (int) ((double) loop * kerroin) + siirra;
-            xyw[l2++] = sizey - (int) ((double) (sizey - MARGINALSIZE) * wave[loop + offset] / (max - min)) + dd;
-            xyw[l2++] = (int) ((double) (loop + 1) * kerroin) + siirra;
-            xyw[l2++] = sizey - (int) ((double) (sizey - MARGINALSIZE) * wave[loop + offset + 1] / (max - min)) + dd;
+
+        for (loop = start_index; loop < end_index - 1; loop++) {
+                xyw[l2++] = (int) (((double) (destination[loop].getTime() - start_point.getTime()) / time_length)) + siirra;
+                xyw[l2++] = sizey - (int) ((double) (sizey - MARGINALSIZE) * wave[loop] / (max - min)) + dd;
+                xyw[l2++] = (int) (((double) (destination[loop + 1].getTime() - start_point.getTime()) / time_length)) + siirra;
+                xyw[l2++] = sizey - (int) ((double) (sizey - MARGINALSIZE) * wave[loop + 1] / (max - min)) + dd;
         }
         canvas.drawLines(xyw, 0, xyw.length, paint);
-        if (offset > 0)
+        if (drawtype == 1)
             canvas.drawText("" + wave[wave.length - 1], xyw[xyw.length - 2], xyw[xyw.length - 1], paint);
 
         if(angle != null) {
-            double length = (double) (xyw[xyw.length - 2] - siirra);
-            int pointa = sizey / ((angle.length == points) ? 15 : 30);
-            for (loop = 0; loop <= pointa; loop++) {
-                double ai = length / (double)pointa * (double)loop;
-                int index = (int) ((ai / length * (double) (points - 1)) + 0.5);
-                drewAngle(canvas, (double)angle[index + offset], (int)ai + siirra, angley);
-            }
+                double length = (double) (xyw[xyw.length - 2] - siirra);
+                int pointa = sizey / ((drawtype == 0) ? 15 : 30);
+                for (loop = 0; loop <= pointa; loop++) {
+                    double ai = length / (double) pointa * (double) loop;
+                    int index = (int) ((ai / length * (double) (points - 1)) + 0.5);
+                        drewAngle(canvas, (double) angle[start_index+index], (int) ai + siirra, angley);
+                }
         }
     }
 
@@ -534,7 +566,6 @@ public class WindSpeedView extends View {
     private String readXMLdata(String place) {
         try {
             int forecast_count = 0;
-            Log.i("AML","AML place=" + place);
             if(place.length() > 0) {
                 weatherplace.clear();
                 String[] row = place.split("\n");
@@ -551,7 +582,6 @@ public class WindSpeedView extends View {
 
             int prosent = 100 / (weatherplace.size() + forecast_count);
 
-            Date endDate;
             if(type >= 0){
                 endDate = new Date();
                 startDate = new Date(endDate.getTime() - HOUR12);
