@@ -47,7 +47,7 @@ public class WindSpeedView extends View {
             {64, R.drawable.p64}, {71, R.drawable.p71}, {72, R.drawable.p72}, {73, R.drawable.p73}, {81, R.drawable.p81},
             {82, R.drawable.p82}, {83, R.drawable.p83}};
     private static final int place_colors[] = new int[]{Color.RED, Color.GREEN, Color.BLUE, Color.MAGENTA};
-    private int forecast_place_colors[] = new int[]{Color.BLACK, Color.BLACK, Color.BLACK, Color.BLACK};
+    private int forecast_place_colors[] = new int[]{Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE};
     private static final long HOUR12 = 3600*12000;
 
     private static final int MARGINALSIZE = 25;
@@ -89,7 +89,7 @@ public class WindSpeedView extends View {
     private void initWSV(){
         paint = new Paint();
         paintfill = new Paint();
-        paintfill.setColor(0xFFFAFAD2);
+        paintfill.setColor(Color.rgb(0,30,20));
         paintfill.setStyle(Paint.Style.FILL);
         Resources res = getResources();
         option_arrays = res.getStringArray(R.array.option_arrays);
@@ -202,7 +202,7 @@ public class WindSpeedView extends View {
                 drawNormal(canvas);
         }
 
-        paint.setColor(Color.BLACK);
+        paint.setColor(Color.WHITE);
         canvas.drawLines(new float[]
                 {MARGINALSIZE, MARGINALSIZE, sizex, MARGINALSIZE,
                         sizex, MARGINALSIZE, sizex, sizey,
@@ -228,17 +228,19 @@ public class WindSpeedView extends View {
                 paint.setColor(Color.GRAY);
                 canvas.drawLine(x, sizey - 10, x, sizey, paint);
             }
-            paint.setColor(Color.BLACK);
+            paint.setColor(Color.WHITE);
             canvas.drawText("" + stobservations.get(Calendar.HOUR_OF_DAY), x, sizey + 15, paint);
             paint.setColor(Color.BLUE);
-            if (loop < 6) {
-                if(observations.get(0).getTempature() != null) {
-                    canvas.drawText((int) (observations.get(0).getTempature()[observations.get(0).getIndex(stobservations.getTime())] + 0.5) + "°", x, sizey - MARGINALSIZE, paint);
+            if(loop>2 || this.getWidth() < this.getHeight()) {
+                if (loop < 6) {
+                    if (observations.get(0).getTempature() != null) {
+                        canvas.drawText((int) (observations.get(0).getTempature()[observations.get(0).getIndex(stobservations.getTime())] + 0.5) + "°", x, sizey - MARGINALSIZE, paint);
+                    }
+                } else {
+                    index = loop - 6;
+                    canvas.drawText((int) (forecast.get(0).getTempature()[index] + 0.5) + "°", x, sizey - MARGINALSIZE, paint);
+                    drewSymbols(canvas, (int) forecast.get(0).getWindspeedwg()[index], x);
                 }
-            } else {
-                index = loop - 6;
-                canvas.drawText((int) (forecast.get(0).getTempature()[index] + 0.5) + "°", x, sizey - MARGINALSIZE, paint);
-                drewSymbols(canvas, (int) forecast.get(0).getWindspeedwg()[index], x);
             }
             stobservations.add(Calendar.HOUR_OF_DAY, 1);
         }
@@ -268,32 +270,44 @@ public class WindSpeedView extends View {
             int y = sizey - MARGINALSIZE - (int) ((double) loop * ty) + MARGINALSIZE;
             paint.setColor(Color.GRAY);
             canvas.drawLine(MARGINALSIZE, y, sizex, y, paint);
-            paint.setColor(Color.BLACK);
+            paint.setColor(Color.WHITE);
             int ms = (int) (max / 5.0 * loop);
             canvas.drawText("" + ms, 5, y, paint);
         }
 
+        int test_place;
+        int text_size;
+        if(this.getWidth() > this.getHeight()) {
+            test_place = sizey - MARGINALSIZE2;
+            text_size = 18;
+        } else {
+            test_place = this.getHeight() / 2;
+            paint.setTextSize(30);
+            text_size = 34;
+        }
         for(int a=0 ; a<observations.size() ; a++) {
+            int last = observations.get(a).getWindspeed().length - 1;
             if(changeindex == -1 || changeindex == a) {
                 if ((observations.size() > 1) && (a < 4))
                     paint.setColor(place_colors[a]);
                 else
-                    paint.setColor(Color.BLACK);
-                canvas.drawText(weatherplace.get(a)[0], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (a * 15), paint);
+                    paint.setColor(Color.WHITE);
                 drawFigure(canvas, start_point, this_time, observations.get(a).getStep(), observations.get(a).getWindspeed(), observations.get(a).getWinddirection(), (changeindex == -1) ? (MARGINALSIZE2 + (a * 15)) : MARGINALSIZE2,1);
             } else {
                 paint.setColor(Color.LTGRAY);
-                canvas.drawText(weatherplace.get(a)[0], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (a * 15), paint);
             }
+            String plasetext = weatherplace.get(a)[0]+" "+observations.get(a).getWindspeed()[last] + " m/s " + observations.get(a).getWinddirection()[last] + " º";
+            canvas.drawText(plasetext, MARGINALSIZE2, test_place - (a * text_size), paint);
         }
-        paint.setColor(Color.BLACK);
-        canvas.drawText(option_arrays[type], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (observations.size() * 15), paint);
+        paint.setColor(Color.WHITE);
+        canvas.drawText(option_arrays[type], MARGINALSIZE2, test_place - (observations.size() * text_size), paint);
+        paint.setTextSize(16);
         for(int a=0 ; a<forecast.size() ; a++) {
             if(changeindex == -1 || changeindex == a) {
                 if ((observations.size() > 1) && (a < 4))
                     paint.setColor(forecast_place_colors[a]);
                 else
-                    paint.setColor(Color.BLACK);
+                    paint.setColor(Color.WHITE);
                 drawFigure(canvas, this_time, end_time, forecast.get(a).getStep(), forecast.get(a).getWindspeed(), forecast.get(a).getWinddirection(), (changeindex == -1) ? (MARGINALSIZE2 + (a * 15)) : MARGINALSIZE2, 2);
             }
         }
@@ -342,13 +356,13 @@ public class WindSpeedView extends View {
         for (loop = 0; loop < 12; loop++) {
             int tempindex = weatherdata.get(0).getIndex(timestep.getTime());
             x = (int) ((double) loop * kerroin) + move + MARGINALSIZE;
-            if (type != MEASURED_TEMPATURE && type != FORECAST_TEMPATURE && weatherdata.get(0).getTempature() != null) {
+            if (type != MEASURED_TEMPATURE && type != FORECAST_TEMPATURE && weatherdata.get(0).getTempature() != null && (loop>2 || this.getWidth() < this.getHeight())) {
                 paint.setColor(Color.BLUE);
                 canvas.drawText((int) (weatherdata.get(0).getTempature()[tempindex] + 0.5) + "°", x, sizey - MARGINALSIZE, paint);
             }
             paint.setColor(Color.GRAY);
             canvas.drawLine(x, sizey - 10, x, sizey, paint);
-            paint.setColor(Color.BLACK);
+            paint.setColor(Color.WHITE);
             canvas.drawText("" + timestep.get(Calendar.HOUR_OF_DAY), x, sizey + 15, paint);
             if (type == FORECAST_WIND || type == FORECAST_TEMPATURE)
                 drewSymbols(canvas, (int)weatherdata.get(0).getWindspeedwg()[tempindex], x);
@@ -387,7 +401,7 @@ public class WindSpeedView extends View {
             int y = sizey - (int) ((double) loop * ty);
             paint.setColor(Color.GRAY);
             canvas.drawLine(MARGINALSIZE, y, sizex, y, paint);
-            paint.setColor(Color.BLACK);
+            paint.setColor(Color.WHITE);
             int ms = (int) (min + (max - min) / 5.0 * loop);
             canvas.drawText("" + ms, 5, y, paint);
         }
@@ -397,6 +411,17 @@ public class WindSpeedView extends View {
             paint.setColor(Color.GRAY);
             canvas.drawLine(MARGINALSIZE, y, sizex, y, paint);
         }
+        int test_place;
+        int text_size;
+        if(this.getWidth() > this.getHeight()) {
+            test_place = sizey - MARGINALSIZE2;
+            text_size = 18;
+        } else {
+            test_place = this.getHeight() / 2;
+            paint.setTextSize(30);
+            text_size = 34;
+        }
+
         for(int a=0 ; a<weatherdata.size() ; a++) {
             if(changeindex == -1 || changeindex == a) {
                 double t[];
@@ -410,24 +435,28 @@ public class WindSpeedView extends View {
                     t = weatherdata.get(a).getWindspeed();
                     at = weatherdata.get(a).getWinddirection();
                 }
-                if ((weatherdata.size() > 1) && (a < 4))
-                    paint.setColor(temp_place_colors[a]);
-                else
-                    paint.setColor(Color.BLACK);
-                canvas.drawText(weatherplace.get(a)[0], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (a * 15), paint);
-                drawFigure(canvas, start_point, end_point, weatherdata.get(a).getStep(), t, at, (changeindex == -1) ? (MARGINALSIZE2 + (a * 15)) : MARGINALSIZE2, 0);
-
                 if (type <= 0 && (changeindex != -1 || weatherdata.size() == 1)) {
                     paint.setColor(Color.LTGRAY);
                     drawFigure(canvas, start_point, end_point, weatherdata.get(a).getStep(), weatherdata.get(a).getWindspeedwg(), null, 0,0);
                 }
+                if ((weatherdata.size() > 1) && (a < 4))
+                    paint.setColor(temp_place_colors[a]);
+                else
+                    paint.setColor(Color.WHITE);
+                drawFigure(canvas, start_point, end_point, weatherdata.get(a).getStep(), t, at, (changeindex == -1) ? (MARGINALSIZE2 + (a * 15)) : MARGINALSIZE2, 0);
             } else {
                 paint.setColor(Color.LTGRAY);
-                canvas.drawText(weatherplace.get(a)[0], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (a * 15), paint);
             }
+            String plasetext = weatherplace.get(a)[0];
+            if(type >= 0) {
+                int last = observations.get(a).getWindspeed().length - 1;
+                plasetext +=" "+observations.get(a).getWindspeed()[last] + " m/s " + observations.get(a).getWinddirection()[last] + " º";
+            }
+            canvas.drawText(plasetext, MARGINALSIZE2, test_place - (a * text_size), paint);
         }
-        paint.setColor(Color.BLACK);
-        canvas.drawText(type < 0 ? (option_arrays[0]+" "+dateFormat.format(startDate)) : option_arrays[type], MARGINALSIZE2, (sizey - MARGINALSIZE2) - (weatherdata.size() * 15), paint);
+        paint.setColor(Color.WHITE);
+        canvas.drawText(type < 0 ? (option_arrays[0]+" "+dateFormat.format(startDate)) : option_arrays[type], MARGINALSIZE2, test_place - (weatherdata.size() * text_size), paint);
+        paint.setTextSize(16);
     }
 
     public void changeIndex(boolean up){
@@ -518,8 +547,6 @@ public class WindSpeedView extends View {
                 xyw[l2++] = sizey - (int) ((double) (sizey - MARGINALSIZE) * wave[loop + 1] / (max - min)) + dd;
         }
         canvas.drawLines(xyw, 0, xyw.length, paint);
-        if (drawtype == 1)
-            canvas.drawText("" + wave[wave.length - 1], xyw[xyw.length - 2], xyw[xyw.length - 1], paint);
 
         if(angle != null) {
                 double length = (double) (xyw[xyw.length - 2] - siirra);
@@ -527,7 +554,7 @@ public class WindSpeedView extends View {
                 for (loop = 0; loop <= pointa; loop++) {
                     double ai = length / (double) pointa * (double) loop;
                     int index = (int) ((ai / length * (double) (points - 1)) + 0.5);
-                        drewAngle(canvas, (double) angle[start_index+index], (int) ai + siirra, angley);
+                        drewAngle(canvas, (double) angle[start_index+index]+90, (int) ai + siirra, angley);
                 }
         }
     }

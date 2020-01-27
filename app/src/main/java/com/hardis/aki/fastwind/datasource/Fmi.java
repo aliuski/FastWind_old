@@ -80,7 +80,7 @@ public class Fmi extends WeatherData {
             try{
                 step[loop] = df.parse((String)time.get(loop));
                 windspeed[loop] = Double.parseDouble((String) v1.get(loop));
-                winddirection[loop] = (int)(Double.parseDouble((String) v2.get(loop)) + 90.0);
+                winddirection[loop] = (int)(Double.parseDouble((String) v2.get(loop)));
                 windspeedwg[loop] = Double.parseDouble((String) v3.get(loop));
                 tempature[loop] = Double.parseDouble((String) v4.get(loop));
             } catch (Exception e) {

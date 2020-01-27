@@ -207,8 +207,6 @@ public class ObservationSettingsPreference  extends DialogPreference{
                     tmp[2] = column[3];
                     tmp[3] = column[4];
                     tmp[4] = column[5];
-//                tmp[3] = "Fmi";
-//                tmp[4] = "";
                 } catch(Exception e){}
                 dataArray.add(tmp);
                 spinnerArray.add(column[0]);

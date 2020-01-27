@@ -53,7 +53,7 @@ public class WindGuru extends WeatherData {
             step[i] = new Date(unixtimeArray.getLong(i) * 1000);
             windspeed[i] = knotsToMS(wind_avgArray.getDouble(i));
             windspeedwg[i] = knotsToMS(windspeedwgArray.getDouble(i));
-            winddirection[i] = wind_directionArray.getInt(i) + 90;
+            winddirection[i] = wind_directionArray.getInt(i);
         }
     }
 }
