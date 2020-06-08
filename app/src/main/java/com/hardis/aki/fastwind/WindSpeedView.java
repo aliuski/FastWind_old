@@ -506,36 +506,35 @@ public class WindSpeedView extends View {
 
     private void drawFigure(Canvas canvas, Date start_point, Date end_point, Date destination[], double wave[], int angle[], int angley, int drawtype){
         int siirra;
-        double kerroin;
         int loop;
         int start_index = 0;
         int end_index = destination.length;
+        double time_length;
 
         if(drawtype == 0) { // Normal cases
             siirra = MARGINALSIZE;
-            kerroin = (double) (sizex - MARGINALSIZE);
+            time_length = (double)(end_point.getTime() - start_point.getTime()) / (double) (sizex - MARGINALSIZE);
         } else if(drawtype == 1) { // Show observation figure.
             siirra = MARGINALSIZE;
-            kerroin = (double) (sizex / 2.0 - MARGINALSIZE);
             for (loop = 0; loop < destination.length; loop++) {
                 if (destination[loop].compareTo(start_point) >= 0) {
                     start_index = loop;
                     break;
                 }
             }
+            time_length = (double)(end_point.getTime() - start_point.getTime()) / ((double) (sizex - MARGINALSIZE) / 2.0);
         } else { // Show forecast figure.
             siirra = (sizex - MARGINALSIZE) / 2 + MARGINALSIZE;
-            kerroin = (double) (sizex / 2.0 - MARGINALSIZE);
             for (loop = 0; loop < destination.length; loop++) {
-                if (destination[loop].compareTo(end_point) > 0) {
+                if (destination[loop].compareTo(end_point) >= 0) {
                     end_index = loop;
                     break;
                 }
             }
+            time_length = (double)(end_point.getTime() - start_point.getTime() - 3600000) / ((double) (sizex - MARGINALSIZE) / 2.0);
         }
 
         int points = end_index - start_index;
-        double time_length = (double)(end_point.getTime() - start_point.getTime()) / kerroin;
         int dd = (int) ((double) (sizey - MARGINALSIZE) * min / (max - min));
         float xyw[] = new float[(points - 1) * 4];
         int l2 = 0;
