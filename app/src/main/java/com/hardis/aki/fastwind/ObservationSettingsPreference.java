@@ -96,6 +96,7 @@ public class ObservationSettingsPreference  extends DialogPreference{
                 if(editName.getText().toString().isEmpty() || editName.getText().toString().indexOf(';') != -1
                         || editSidName.getText().toString().isEmpty()
                         || editGroupName.getText().toString().indexOf(';') != -1
+                        || editGroupName.getText().toString().indexOf('(') != -1
                         || editStationPassword.getText().toString().indexOf(';') != -1)
                     return;
                 int index = (int)sItems.getSelectedItemPosition();
@@ -107,13 +108,13 @@ public class ObservationSettingsPreference  extends DialogPreference{
                 tmp[4] = editStationPassword.getText().toString();
                 if(newEditStatus) {
                     dataArray.add(index,tmp);
-                    spinnerArray.add(index+1,editName.getText().toString());
+                    spinnerArray.add(index+1,addGroupName(editName.getText().toString(), tmp[1]));
                     newEditStatus = false;
                 } else {
                     if(index == 0)
                         return;
                     dataArray.set(index-1, tmp);
-                    spinnerArray.set(index, editName.getText().toString());
+                    spinnerArray.set(index, addGroupName(editName.getText().toString(), tmp[1]));
                 }
                 adapter.notifyDataSetChanged();
                 sItems.setSelection(0);
@@ -140,7 +141,7 @@ public class ObservationSettingsPreference  extends DialogPreference{
                         stationtypeSpinner.setSelection(1);
                         editStationPassword.setText(tmp[4]);
                     }
-                    editName.setText(spinnerArray.get(position));
+                    editName.setText(removeGroupName(spinnerArray.get(position)));
                     enableInputs(true);
                 }
                 newEditStatus = false;
@@ -183,6 +184,19 @@ public class ObservationSettingsPreference  extends DialogPreference{
             editStationPassword.setEnabled(false);
     }
 
+    private String addGroupName(String in, String groupname){
+        if(!groupname.isEmpty())
+            return in + " ("+groupname+")";
+        return in;
+    }
+
+    private String removeGroupName(String in){
+        int index = in.indexOf('(');
+        if(index != -1)
+            return in.substring(0, index-1);
+        return in;
+    }
+
     @Override
     protected Object onGetDefaultValue(TypedArray a, int index) {
         return a.getString(index);
@@ -209,7 +223,7 @@ public class ObservationSettingsPreference  extends DialogPreference{
                     tmp[4] = column[5];
                 } catch(Exception e){}
                 dataArray.add(tmp);
-                spinnerArray.add(column[0]);
+                spinnerArray.add(addGroupName(column[0], tmp[1]));
             }
         }
     }
@@ -222,7 +236,7 @@ public class ObservationSettingsPreference  extends DialogPreference{
                 String tmp[] = dataArray.get(i);
                 if(!value.isEmpty())
                     value += '\n';
-                value += spinnerArray.get(i+1) +';'+ tmp[0] +';'+ tmp[1] +';'+ tmp[2] +';'+ tmp[3] +';'+ tmp[4];
+                value += removeGroupName(spinnerArray.get(i+1)) +';'+ tmp[0] +';'+ tmp[1] +';'+ tmp[2] +';'+ tmp[3] +';'+ tmp[4];
             }
             persistString(value);
         }

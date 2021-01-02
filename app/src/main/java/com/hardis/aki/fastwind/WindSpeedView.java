@@ -325,12 +325,18 @@ public class WindSpeedView extends View {
         ArrayList<WeatherData> weatherdata;
         Calendar timestep = Calendar.getInstance();
         double kerroin = (double) (sizex - MARGINALSIZE) / 12;
-
         int[] temp_place_colors;
+        ArrayList<String[]> temp_weatherplace = new ArrayList<String[]>();
+
         if (type == FORECAST_WIND || type == FORECAST_TEMPATURE) {
             kerroin = (double) sizex / 12.0;
             weatherdata = forecast;
             temp_place_colors = forecast_place_colors;
+            temp_weatherplace = new ArrayList<String[]>();
+            for (int i = 0 ; i< weatherplace.size() ; i++) {
+                if (weatherplace.get(i)[3].equals("true"))
+                    temp_weatherplace.add(weatherplace.get(i));
+            }
             start_point = weatherdata.get(0).getStep()[0];
             end_point = weatherdata.get(0).getStep()[weatherdata.get(0).getStep().length-1];
             timestep.setTime(weatherdata.get(0).getStep()[0]);
@@ -345,6 +351,7 @@ public class WindSpeedView extends View {
         } else {
             weatherdata = observations;
             temp_place_colors = place_colors;
+            temp_weatherplace = weatherplace;
             start_point = startDate;
             end_point = endDate;
             timestep.setTime(start_point);
@@ -447,7 +454,7 @@ public class WindSpeedView extends View {
             } else {
                 paint.setColor(Color.LTGRAY);
             }
-            String plasetext = weatherplace.get(a)[0];
+            String plasetext = temp_weatherplace.get(a)[0];
             if(type >= 0) {
                 int last = observations.get(a).getWindspeed().length - 1;
                 plasetext +=" "+observations.get(a).getWindspeed()[last] + " m/s " + observations.get(a).getWinddirection()[last] + " º";
